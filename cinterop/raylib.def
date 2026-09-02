@@ -1,0 +1,39 @@
+# Kotlin/Native cinterop definition for raylib.
+#
+# The vendored header lives in cinterop/include/raylib.h. Amper automatically
+# adds that directory to the compiler include path, so `headers` can reference
+# the header by its plain name.
+
+package = raylib
+
+headers = raylib.h
+headerFilter = raylib.h
+
+# ---------------------------------------------------------------------------
+# Windows (MinGW): bundle the prebuilt raylib shared library from this repo.
+# The import library (libraylibdll.a) is embedded into the generated klib and
+# linked automatically, so no local raylib installation is needed.
+#
+# The runtime DLL (raylib.dll) is vendored under cinterop/lib/mingwX64/. A copy
+# is also kept at the repo root because the test runner executes the test binary
+# with the module directory as its working directory, and the Windows DLL search
+# path includes that directory. End consumers should place raylib.dll next to
+# their final executable.
+#
+# NOTE: Amper runs cinterop with the Kotlin/Native distribution as the working
+# directory and does not pass `-Xproject-dir`, so a relative `libraryPaths`
+# entry cannot resolve. Point it at the absolute path of this checkout.
+# ---------------------------------------------------------------------------
+staticLibraries.mingw = libraylibdll.a
+libraryPaths.mingw = F:/projects/raylib-kt/cinterop/lib/mingwX64
+linkerOpts.mingw = -lopengl32 -lgdi32 -lwinmm
+
+# ---------------------------------------------------------------------------
+# Linux / macOS: link against a system raylib (no prebuilt binaries are
+# published for these platforms). Install raylib or drop a libraylib into the
+# library search path.
+# ---------------------------------------------------------------------------
+linkerOpts.linux = -lraylib -lm -lpthread -ldl -lrt -lX11 -lGL
+linkerOpts.osx = -lraylib -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework CoreAudio -framework CoreAudioKit
+
+userSetupHint = On Linux/macOS install raylib (e.g. `brew install raylib`, `apt install libraylib-dev`), or place `libraylib` on the library search path.

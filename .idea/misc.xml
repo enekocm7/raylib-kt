@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BiomeSettings">
+    <option name="enableLspFormat" value="true" />
+    <option name="formatOnSave" value="true" />
+    <option name="sortImportOnSave" value="true" />
+  </component>
+  <component name="GoImports">
+    <option name="excludedPackages">
+      <array>
+        <option value="github.com/pkg/errors" />
+        <option value="golang.org/x/net/context" />
+      </array>
+    </option>
+  </component>
+  <component name="JunieProject"><![CDATA[{}]]></component>
+  <component name="KubernetesApiProvider"><![CDATA[{}]]></component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="temurin-26" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+  <component name="RustProjectSettings">
+    <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+  </component>
+  <component name="TimeTrackingManager">
+    <option name="totallyTimeSpent" value="581000" />
+  </component>
+  <component name="TypeScriptCompiler">
+    <option name="memoryLimit" value="4096" />
+    <option name="nodeInterpreterTextField" value="node" />
+  </component>
+  <component name="com.lasagnerd.odin.settings.OdinSdkConfigPersistentState">
+    <option name="sdkPath" value="$USER_HOME$/scoop/apps/odin/2026-05" />
+    <option name="semanticAnnotatorEnabled" value="true" />
+    <option name="odinCheckerEnabled" value="true" />
+    <option name="debuggerId" value="odin-lldb-dap" />
+    <option name="highlightUnknownReferencesEnabled" value="false" />
+    <option name="conditionalSymbolResolutionEnabled" value="false" />
+    <option name="cacheEnabled" value="false" />
+    <option name="useBuiltinFormatter" value="false" />
+  </component>
+</project>
