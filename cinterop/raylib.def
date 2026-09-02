@@ -1,39 +1,18 @@
 # Kotlin/Native cinterop definition for raylib.
 #
-# The vendored header lives in cinterop/include/raylib.h. Amper automatically
+# The raylib header is vendored in cinterop/include/raylib.h. Amper automatically
 # adds that directory to the compiler include path, so `headers` can reference
-# the header by its plain name.
+# the header by its plain name and no system raylib headers are required.
 
 package = raylib
 
 headers = raylib.h
 headerFilter = raylib.h
 
-# ---------------------------------------------------------------------------
-# Windows (MinGW): bundle the prebuilt raylib shared library from this repo.
-# The import library (libraylibdll.a) is embedded into the generated klib and
-# linked automatically, so no local raylib installation is needed.
-#
-# The runtime DLL (raylib.dll) is vendored under cinterop/lib/mingwX64/. A copy
-# is also kept at the repo root because the test runner executes the test binary
-# with the module directory as its working directory, and the Windows DLL search
-# path includes that directory. End consumers should place raylib.dll next to
-# their final executable.
-#
-# NOTE: Amper runs cinterop with the Kotlin/Native distribution as the working
-# directory and does not pass `-Xproject-dir`, so a relative `libraryPaths`
-# entry cannot resolve. Point it at the absolute path of this checkout.
-# ---------------------------------------------------------------------------
-staticLibraries.mingw = libraylibdll.a
-libraryPaths.mingw = F:/projects/raylib-kt/cinterop/lib/mingwX64
-linkerOpts.mingw = -lopengl32 -lgdi32 -lwinmm
-
-# ---------------------------------------------------------------------------
-# Linux / macOS: link against a system raylib (no prebuilt binaries are
-# published for these platforms). Install raylib or drop a libraylib into the
-# library search path.
-# ---------------------------------------------------------------------------
+# Link against a system-installed raylib. Install it via your platform's package
+# manager and keep the platform dependencies below as-is.
 linkerOpts.linux = -lraylib -lm -lpthread -ldl -lrt -lX11 -lGL
 linkerOpts.osx = -lraylib -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework CoreAudio -framework CoreAudioKit
+linkerOpts.mingw = -lraylib -lopengl32 -lgdi32 -lwinmm
 
-userSetupHint = On Linux/macOS install raylib (e.g. `brew install raylib`, `apt install libraylib-dev`), or place `libraylib` on the library search path.
+userSetupHint = Install raylib (Linux: `apt install libraylib-dev`; macOS: `brew install raylib`; Windows/MSYS2: `pacman -S mingw-w64-x86_64-raylib`) and make sure `libraylib` is on the linker search path.
