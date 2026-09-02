@@ -1,3 +1,6 @@
 product:
   type: lib
   platforms: [ linuxX64, mingwX64 ]
+
+plugins:
+  build-plugin: enabled

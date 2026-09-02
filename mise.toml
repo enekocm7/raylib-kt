@@ -1,0 +1,5 @@
+[tasks.build]
+description = "Generates def file and then builds the project"
+alias = "b"
+run = ["./kotlin task :raylib-kt:generate@build-plugin", "./kotlin build"]
+run_windows = ["kotlin.bat task :raylib-kt:generate@build-plugin", "kotlin.bat build"]
