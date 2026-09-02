@@ -6,8 +6,11 @@
 
 package = raylib
 
-headers = raylib.h
-headerFilter = raylib.h
+headers = raylib.h raymath.h rlgl.h
+headerFilter = raylib.h raymath.h rlgl.h
+
+staticLibraries.linux = libraylib.a libraylib.so
+staticLibraries.mingw = libraylibdll.a libraylib.a raylib.dll
 
 # Link against a system-installed raylib. Install it via your platform's package
 # manager and keep the platform dependencies below as-is.
