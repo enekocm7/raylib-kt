@@ -4,3 +4,36 @@ product:
 
 plugins:
   build-plugin: enabled
+
+description: Kotlin Native bindings for raylib
+
+settings:
+  publishing:
+    artifactId: raylib-kt
+
+    enabled: true
+    group: io.github.enekocm7
+    version: 0.1.0
+    mavenCentral:
+      enabled: true
+      publishingMode: auto
+    signArtifacts: true
+    publishSources: true
+    pom:
+      name: raylib-kt
+      description: Kotlin Native bindings for raylib
+      url: https://github.com/enekocm7/raylib-kt
+      licenses:
+        - name: zlib/libpng License
+          url: https://opensource.org/license/Zlib
+      developers:
+        - id: enekocm7
+          name: Eneko Cañedo
+          email: enekocanedo@gmail.com
+      scm:
+        url: https://github.com/enekocm7/raylib-kt
+
+repositories:
+  - id: mavenLocal
+    url: mavenLocal
+    publish: true

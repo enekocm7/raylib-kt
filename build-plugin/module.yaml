@@ -1,1 +1,8 @@
 product: jvm/amper-plugin
+
+description: Kotlin plugin for generating def files
+
+repositories:
+  - id: mavenLocal
+    url: mavenLocal
+    publish: true
