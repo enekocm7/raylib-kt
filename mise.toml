@@ -1,13 +1,21 @@
+[tasks.generateDef]
+description = "Generates def file for linking the raylib c library"
+alias = "g"
+run = "./kotlin task :raylib-kt:generate@build-plugin"
+run_windows = "kotlin.bat task :raylib-kt:generate@build-plugin"
+
 [tasks.build]
 description = "Generates def file and then builds the project"
 alias = "b"
-run = ["./kotlin task :raylib-kt:generate@build-plugin", "./kotlin build"]
-run_windows = ["kotlin.bat task :raylib-kt:generate@build-plugin", "kotlin.bat build"]
+depends = "generateDef"
+run = "./kotlin build"
+run_windows = "kotlin.bat build"
 
 [tasks.publish]
 description = "Publishes the package to maven central"
 alias = "p"
 env = { _.file = ".env" }
+depends = "build"
 run = "./kotlin publish mavenCentral"
 run_windows = "kotlin.bat publish mavenCentral"
 
@@ -15,5 +23,6 @@ run_windows = "kotlin.bat publish mavenCentral"
 description = "Publishes the package to local maven"
 alias = "pl"
 env = { _.file = ".env" }
+depends = "build"
 run = "./kotlin publish mavenLocal"
 run_windows = "kotlin.bat publish mavenLocal"
