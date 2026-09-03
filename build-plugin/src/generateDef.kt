@@ -1,36 +1,272 @@
+import org.jetbrains.amper.plugins.Input
 import org.jetbrains.amper.plugins.Output
 import org.jetbrains.amper.plugins.TaskAction
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
+
+private const val RAYLIB_VERSION = "6.0"
+private const val LINUX_RELEASE_SHA256 = "b64ba618a19e7da9e9c0e09bb398ecfd477a77d2d7231901bafc8739d27c08d2"
+private val RAYLIB_HEADERS = listOf("raylib.h", "raymath.h", "rlgl.h")
+private val RAYLIB_SOURCES = listOf(
+    "rcore",
+    "rshapes",
+    "rtextures",
+    "rtext",
+    "rmodels",
+    "raudio",
+    "rglfw",
+)
 
 @TaskAction
 fun generateDef(
+    @Input includeDir: Path,
+    @Input bundledLibraryDir: Path,
     @Output defPath: Path,
+    @Output raylibBuildDir: Path,
 ) {
-    val file = defPath.toFile()
-    if (file.exists()) file.delete()
+    val sourceDir = raylibBuildDir.resolve("source")
+    val host = hostPlatform()
+    val nativeBuildDir = sourceDir.resolve("build")
 
-    file.createNewFile()
-    val libPath = defPath.parent
-    val fixedPath = libPath.toString().replace("\\", "/")
-    val linuxPath = "$fixedPath/lib/linux"
-    val windowsPath = "$fixedPath/lib/mingw"
+    cloneRaylib(sourceDir)
+    if (host == "mingw") {
+        buildIfMissing(sourceDir, nativeBuildDir.resolve("mingw"), "mingw")
+        provisionLinuxRelease(sourceDir, nativeBuildDir.resolve("linux"))
+    } else {
+        buildIfMissing(sourceDir, nativeBuildDir.resolve("linux"), "linux")
+        buildIfMissing(sourceDir, nativeBuildDir.resolve("mingw"), "mingw")
+    }
 
-    file.writeText(
-        """
-        headers = raylib.h raymath.h rlgl.h
-        headerFilter = raylib.h raymath.h rlgl.h
+    copyArtifacts(sourceDir, nativeBuildDir, includeDir, bundledLibraryDir)
 
-        staticLibraries.linux = libraylib.a libraylib.so
-        libraryPaths.linux = $linuxPath
+    val linuxLibraryDir = bundledLibraryDir.resolve("linux")
+    val mingwLibraryDir = bundledLibraryDir.resolve("mingw")
 
-        staticLibraries.mingw = libraylib.a raylib.dll libraylibdll.a
-        libraryPaths.mingw = $windowsPath
+    defPath.toFile().apply {
+        parentFile.mkdirs()
+        writeText(
+            """
+            headers = raylib.h raymath.h rlgl.h
+            headerFilter = raylib.h raymath.h rlgl.h
+            compilerOpts = -I${includeDir.forDefFile()}
 
-        linkerOpts.linux = -lm -lpthread -ldl -lrt -lX11 -lGL
-        linkerOpts.mingw = -lopengl32 -lgdi32 -lwinmm
+            staticLibraries.linux = libraylib.a
+            libraryPaths.linux = ${linuxLibraryDir.forDefFile()}
 
-        userSetupHint = The required raylib static library is bundled with this Kotlin l
-    """.trimIndent()
+            staticLibraries.mingw = libraylib.a
+            libraryPaths.mingw = ${mingwLibraryDir.forDefFile()}
+
+            linkerOpts.linux = -lm -lpthread -ldl -lrt -lX11 -lGL
+            linkerOpts.mingw = -lopengl32 -lgdi32 -lwinmm
+
+            userSetupHint = raylib is built by the build-plugin with the Kotlin/Native LLVM toolchain
+            """.trimIndent() + "\n"
+        )
+    }
+}
+
+private fun copyArtifacts(
+    sourceDir: Path,
+    nativeBuildDir: Path,
+    includeDir: Path,
+    bundledLibraryDir: Path,
+) {
+    Files.createDirectories(includeDir)
+
+    for (header in RAYLIB_HEADERS) {
+        Files.copy(
+            sourceDir.resolve("src").resolve(header),
+            includeDir.resolve(header),
+            StandardCopyOption.REPLACE_EXISTING,
+        )
+    }
+    for (platform in listOf("linux", "mingw")) {
+        val platformLibraryDir = bundledLibraryDir.resolve(platform)
+        Files.createDirectories(platformLibraryDir)
+        Files.copy(
+            nativeBuildDir.resolve(platform).resolve("libraylib.a"),
+            platformLibraryDir.resolve("libraylib.a"),
+            StandardCopyOption.REPLACE_EXISTING,
+        )
+    }
+}
+
+private fun buildIfMissing(sourceDir: Path, libraryDir: Path, platform: String) {
+    if (!libraryDir.resolve("libraylib.a").toFile().isFile) {
+        buildRaylib(sourceDir, libraryDir, platform)
+    }
+}
+
+private fun provisionLinuxRelease(sourceDir: Path, libraryDir: Path) {
+    val targetLibrary = libraryDir.resolve("libraylib.a")
+    if (targetLibrary.toFile().isFile) return
+
+    val downloadsDir = sourceDir.resolve("build/downloads")
+    val archive = downloadsDir.resolve("raylib-$RAYLIB_VERSION-linux-amd64.tar.gz")
+    Files.createDirectories(downloadsDir)
+
+    if (!archive.toFile().isFile || sha256(archive) != LINUX_RELEASE_SHA256) {
+        val partialArchive = archive.resolveSibling("${archive.fileName}.part")
+        Files.deleteIfExists(partialArchive)
+        java.net.URI(
+            "https://github.com/raysan5/raylib/releases/download/$RAYLIB_VERSION/" +
+                "raylib-${RAYLIB_VERSION}_linux_amd64.tar.gz"
+        ).toURL().openStream().use { input ->
+            Files.copy(input, partialArchive, StandardCopyOption.REPLACE_EXISTING)
+        }
+        check(sha256(partialArchive) == LINUX_RELEASE_SHA256) {
+            "Checksum mismatch while downloading the raylib $RAYLIB_VERSION Linux release"
+        }
+        Files.move(partialArchive, archive, StandardCopyOption.REPLACE_EXISTING)
+    }
+
+    val extractedDir = sourceDir.resolve("build/releases/linux")
+    Files.createDirectories(extractedDir)
+    run(sourceDir, "tar", "-xzf", archive.toString(), "-C", extractedDir.toString())
+    val releaseLibrary = extractedDir.resolve("raylib-${RAYLIB_VERSION}_linux_amd64/lib/libraylib.a")
+    check(releaseLibrary.toFile().isFile) { "The raylib Linux release did not contain libraylib.a" }
+    Files.createDirectories(libraryDir)
+    Files.copy(releaseLibrary, targetLibrary, StandardCopyOption.REPLACE_EXISTING)
+}
+
+private fun sha256(path: Path): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    Files.newInputStream(path).use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
+    }
+    return digest.digest().joinToString("") { byte -> "%02x".format(byte) }
+}
+
+private fun cloneRaylib(sourceDir: Path) {
+    if (sourceDir.resolve("src/raylib.h").toFile().isFile) return
+
+    check(!sourceDir.toFile().exists()) {
+        "Incomplete raylib source directory at $sourceDir; delete it and run the build again"
+    }
+    sourceDir.parent.toFile().mkdirs()
+    run(
+        sourceDir.parent,
+        "git",
+        "clone",
+        "--depth", "1",
+        "--branch", RAYLIB_VERSION,
+        "https://github.com/raysan5/raylib.git",
+        sourceDir.fileName.toString(),
+    )
+}
+
+private fun buildRaylib(sourceDir: Path, libraryDir: Path, platform: String) {
+    val dependencies = konanDependenciesDir()
+    val llvm = newestDependency(dependencies, "llvm-", "-${hostName()}-essentials-")
+    val executableSuffix = if (isWindows()) ".exe" else ""
+    val clang = llvm.resolve("bin/clang$executableSuffix")
+    val archiveTool = llvm.resolve("bin/llvm-ar$executableSuffix")
+
+    check(clang.toFile().isFile && archiveTool.toFile().isFile) {
+        "Kotlin/Native LLVM tools were not found under $llvm. Run a Kotlin/Native build once to download them."
+    }
+
+    val sourceRoot = sourceDir.resolve("src")
+    val objectDir = libraryDir.resolve("objects")
+    objectDir.toFile().mkdirs()
+
+    val platformFlags = when (platform) {
+        "mingw" -> {
+            val sysroot = newestDependency(dependencies, "msys2-mingw-w64-x86_64-", "")
+            listOf(
+                "--target=x86_64-pc-windows-gnu",
+                "--sysroot=${sysroot.forCommandLine()}",
+                "-DUNICODE",
+            )
+        }
+        "linux" -> listOf(
+            "--target=x86_64-unknown-linux-gnu",
+            "-fPIC",
+            "-D_GLFW_X11",
+        )
+        else -> error("Unsupported host platform: $platform")
+    }
+
+    val commonFlags = listOf(
+        "-std=c99",
+        "-O1",
+        "-D_GNU_SOURCE",
+        "-DPLATFORM_DESKTOP_GLFW",
+        "-DGRAPHICS_API_OPENGL_33",
+        "-Wno-missing-braces",
+        "-fno-strict-aliasing",
+        "-I${sourceRoot.forCommandLine()}",
+        "-I${sourceRoot.resolve("external/glfw/include").forCommandLine()}",
     )
 
+    val objects = RAYLIB_SOURCES.map { source ->
+        val objectFile = objectDir.resolve("$source.o")
+        run(
+            sourceRoot,
+            clang.toString(),
+            *platformFlags.toTypedArray(),
+            *commonFlags.toTypedArray(),
+            "-c", sourceRoot.resolve("$source.c").toString(),
+            "-o", objectFile.toString(),
+        )
+        objectFile
+    }
+
+    libraryDir.toFile().mkdirs()
+    run(
+        sourceRoot,
+        archiveTool.toString(),
+        "rcs",
+        libraryDir.resolve("libraylib.a").toString(),
+        *objects.map(Path::toString).toTypedArray(),
+    )
+}
+
+private fun konanDependenciesDir(): Path {
+    val konanHome = System.getenv("KONAN_DATA_DIR")
+        ?.takeIf(String::isNotBlank)
+        ?.let(Path::of)
+        ?: Path.of(System.getProperty("user.home"), ".konan")
+    return konanHome.resolve("dependencies")
+}
+
+private fun newestDependency(directory: Path, prefix: String, marker: String): Path {
+    val candidates = directory.toFile().listFiles()
+        ?.filter { it.isDirectory && it.name.startsWith(prefix) && it.name.contains(marker) }
+        .orEmpty()
+    return candidates.maxByOrNull { dependencyRevision(it.name) }?.toPath()
+        ?: error("Required Kotlin/Native dependency matching '$prefix*$marker*' was not found in $directory")
+}
+
+private fun dependencyRevision(name: String): Int =
+    name.substringAfterLast('-').toIntOrNull() ?: 0
+
+private fun hostPlatform(): String = when {
+    isWindows() -> "mingw"
+    System.getProperty("os.name").lowercase().contains("linux") -> "linux"
+    else -> error("raylib-kt currently supports Windows and Linux hosts")
+}
+
+private fun hostName(): String = if (isWindows()) "windows" else "linux"
+
+private fun isWindows(): Boolean = System.getProperty("os.name").lowercase().contains("windows")
+
+private fun Path.forDefFile(): String = toAbsolutePath().normalize().toString().replace('\\', '/')
+
+private fun Path.forCommandLine(): String = toAbsolutePath().normalize().toString().replace('\\', '/')
+
+private fun run(workingDirectory: Path, vararg command: String) {
+    val exitCode = ProcessBuilder(*command)
+        .directory(workingDirectory.toFile())
+        .inheritIO()
+        .start()
+        .waitFor()
+    check(exitCode == 0) { "Command failed with exit code $exitCode: ${command.joinToString(" ")}" }
 }

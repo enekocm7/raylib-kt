@@ -1,5 +1,4 @@
 /build
 .idea
-cinterop/raylib.def
-creds.properties
+/cinterop
 .env

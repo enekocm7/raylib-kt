@@ -1,5 +1,5 @@
 [tasks.generateDef]
-description = "Generates def file for linking the raylib c library"
+description = "Builds raylib with Kotlin/Native's toolchain and generates its def file"
 alias = "g"
 run = "./kotlin task :raylib-kt:generate@build-plugin"
 run_windows = "kotlin.bat task :raylib-kt:generate@build-plugin"
