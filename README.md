@@ -6,6 +6,7 @@ Supported platforms:
 
 - Linux x86-64 (`linuxX64`)
 - Windows x86-64 (`mingwX64`)
+- macOS Apple Silicon (`macosArm64`)
 
 ## Install
 
@@ -100,6 +101,14 @@ sudo zypper install git-core curl tar unzip \
 
 For other Linux distributions, install the equivalent X11, Wayland, xkbcommon, OpenGL, and ALSA development packages. The `wayland-scanner` command must be available on `PATH`.
 
+### macOS
+
+Install the Xcode command-line tools so `xcrun` and the macOS SDK are available:
+
+```shell
+xcode-select --install
+```
+
 ## Build from source
 
 Clone the repository:
@@ -123,7 +132,14 @@ kotlin.bat task :raylib-kt:generate@build-plugin
 kotlin.bat build
 ```
 
-The first command downloads and builds raylib, then generates the Kotlin/Native cinterop definition. The second command builds the library for Linux and Windows.
+Build on an Apple Silicon Mac:
+
+```shell
+./kotlin task :raylib-kt:generate@build-plugin
+./kotlin build
+```
+
+The first command downloads and builds raylib, then generates the Kotlin/Native cinterop definition. The second command builds the library for the targets supported by the current host.
 
 If [mise](https://mise.jdx.dev/) is installed, the same build can be run with:
 

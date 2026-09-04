@@ -9,8 +9,10 @@ import java.security.MessageDigest
 private const val RAYLIB_VERSION = "6.0"
 private const val LINUX_RELEASE_SHA256 = "b64ba618a19e7da9e9c0e09bb398ecfd477a77d2d7231901bafc8739d27c08d2"
 private const val LINUX_BUILD_CONFIGURATION = "raylib-6.0-linux-x64-glfw-x11-wayland-v2"
+private const val MACOS_ARM64_BUILD_CONFIGURATION = "raylib-6.0-macos-arm64-glfw-cocoa-v1"
 private const val MINGW_DEPENDENCY = "msys2-mingw-w64-x86_64-2"
 private const val MINGW_DEPENDENCY_SHA256 = "50b7c3b4c91661753e2c23de00d4d7d113264c947f7ec6836eac085e16f602e8"
+private val MACOS_FRAMEWORKS = listOf("OpenGL", "Cocoa", "IOKit", "CoreAudio", "CoreVideo")
 private val RAYLIB_HEADERS = listOf("raylib.h", "raymath.h", "rlgl.h")
 private val RAYLIB_SOURCES = listOf(
     "rcore",
@@ -45,18 +47,30 @@ fun generateDef(
     val nativeBuildDir = sourceDir.resolve("build")
 
     cloneRaylib(sourceDir)
-    if (host == "mingw") {
-        buildIfMissing(sourceDir, nativeBuildDir.resolve("mingw"), "mingw")
-        provisionLinuxRelease(sourceDir, nativeBuildDir.resolve("linux"))
-    } else {
-        buildIfMissing(sourceDir, nativeBuildDir.resolve("linux"), "linux")
-        buildIfMissing(sourceDir, nativeBuildDir.resolve("mingw"), "mingw")
+    when (host) {
+        "mingw" -> {
+            buildIfMissing(sourceDir, nativeBuildDir.resolve("mingw"), "mingw")
+            provisionLinuxRelease(sourceDir, nativeBuildDir.resolve("linux"))
+        }
+        "linux" -> {
+            buildIfMissing(sourceDir, nativeBuildDir.resolve("linux"), "linux")
+            buildIfMissing(sourceDir, nativeBuildDir.resolve("mingw"), "mingw")
+        }
+        "macosArm64" -> {
+            provisionLinuxRelease(sourceDir, nativeBuildDir.resolve("linux"))
+            buildIfMissing(sourceDir, nativeBuildDir.resolve("mingw"), "mingw")
+            val macosLibraryDir = nativeBuildDir.resolve("macosArm64")
+            buildIfMissing(sourceDir, macosLibraryDir, "macosArm64")
+            verifyMacosArm64Library(sourceDir.resolve("src"), macosLibraryDir.resolve("libraylib.a"))
+        }
     }
 
-    copyArtifacts(sourceDir, nativeBuildDir, includeDir, bundledLibraryDir)
+    val builtPlatforms = listOf("linux", "mingw") + listOfNotNull(host.takeIf { it == "macosArm64" })
+    copyArtifacts(sourceDir, nativeBuildDir, includeDir, bundledLibraryDir, builtPlatforms)
 
     val linuxLibraryDir = bundledLibraryDir.resolve("linux")
     val mingwLibraryDir = bundledLibraryDir.resolve("mingw")
+    val macosArm64LibraryDir = bundledLibraryDir.resolve("macosArm64")
 
     defPath.toFile().apply {
         parentFile.mkdirs()
@@ -72,8 +86,12 @@ fun generateDef(
             staticLibraries.mingw = libraylib.a
             libraryPaths.mingw = ${mingwLibraryDir.forDefFile()}
 
+            staticLibraries.osx = libraylib.a
+            libraryPaths.osx = ${macosArm64LibraryDir.forDefFile()}
+
             linkerOpts.linux = -L/usr/lib64 -L/usr/lib/x86_64-linux-gnu -lm -lpthread -ldl -lrt -lX11 -lGL
             linkerOpts.mingw = -lopengl32 -lgdi32 -lwinmm
+            linkerOpts.osx = ${MACOS_FRAMEWORKS.joinToString(" ") { "-framework $it" }}
 
             userSetupHint = raylib is built by the build-plugin with the Kotlin/Native LLVM toolchain
             """.trimIndent() + "\n"
@@ -86,6 +104,7 @@ private fun copyArtifacts(
     nativeBuildDir: Path,
     includeDir: Path,
     bundledLibraryDir: Path,
+    platforms: List<String>,
 ) {
     Files.createDirectories(includeDir)
 
@@ -96,7 +115,7 @@ private fun copyArtifacts(
             StandardCopyOption.REPLACE_EXISTING,
         )
     }
-    for (platform in listOf("linux", "mingw")) {
+    for (platform in platforms) {
         val platformLibraryDir = bundledLibraryDir.resolve(platform)
         Files.createDirectories(platformLibraryDir)
         Files.copy(
@@ -110,12 +129,17 @@ private fun copyArtifacts(
 private fun buildIfMissing(sourceDir: Path, libraryDir: Path, platform: String) {
     val library = libraryDir.resolve("libraylib.a")
     val configurationFile = libraryDir.resolve(".build-configuration")
-    val configurationChanged = platform == "linux" &&
-        (!configurationFile.toFile().isFile || Files.readString(configurationFile).trim() != LINUX_BUILD_CONFIGURATION)
+    val expectedConfiguration = when (platform) {
+        "linux" -> LINUX_BUILD_CONFIGURATION
+        "macosArm64" -> MACOS_ARM64_BUILD_CONFIGURATION
+        else -> null
+    }
+    val configurationChanged = expectedConfiguration != null &&
+        (!configurationFile.toFile().isFile || Files.readString(configurationFile).trim() != expectedConfiguration)
 
     if (!library.toFile().isFile || configurationChanged) {
         buildRaylib(sourceDir, libraryDir, platform)
-        if (platform == "linux") Files.writeString(configurationFile, "$LINUX_BUILD_CONFIGURATION\n")
+        if (expectedConfiguration != null) Files.writeString(configurationFile, "$expectedConfiguration\n")
     }
 }
 
@@ -229,6 +253,12 @@ private fun buildRaylib(sourceDir: Path, libraryDir: Path, platform: String) {
                 "-D_GLFW_WAYLAND",
             )
         }
+        "macosArm64" -> listOf(
+            "--target=arm64-apple-macos11",
+            "-isysroot", macosSdkPath().forCommandLine(),
+            "-fPIC",
+            "-D_GLFW_COCOA",
+        )
         else -> error("Unsupported host platform: $platform")
     }
 
@@ -246,11 +276,17 @@ private fun buildRaylib(sourceDir: Path, libraryDir: Path, platform: String) {
 
     val objects = RAYLIB_SOURCES.map { source ->
         val objectFile = objectDir.resolve("$source.o")
+        val sourceFlags = if (platform == "macosArm64" && source == "rglfw") {
+            arrayOf("-x", "objective-c", "-U_GNU_SOURCE")
+        } else {
+            emptyArray()
+        }
         run(
             sourceRoot,
             clang.toString(),
             *platformFlags.toTypedArray(),
             *commonFlags.toTypedArray(),
+            *sourceFlags,
             "-c", sourceRoot.resolve("$source.c").toString(),
             "-o", objectFile.toString(),
         )
@@ -265,6 +301,31 @@ private fun buildRaylib(sourceDir: Path, libraryDir: Path, platform: String) {
         libraryDir.resolve("libraylib.a").toString(),
         *objects.map(Path::toString).toTypedArray(),
     )
+
+}
+
+private fun verifyMacosArm64Library(sourceRoot: Path, library: Path) {
+    val sdk = macosSdkPath()
+    val smokeSource = library.parent.resolve("link-smoke-test.c")
+    val smokeExecutable = library.parent.resolve("link-smoke-test")
+    Files.writeString(
+        smokeSource,
+        "#include \"raylib.h\"\n" +
+            "int main(void) { InitWindow(1, 1, \"\"); InitAudioDevice(); CloseAudioDevice(); CloseWindow(); return 0; }\n",
+    )
+
+    run(
+        sourceRoot,
+        "xcrun", "--sdk", "macosx", "clang",
+        "--target=arm64-apple-macos11",
+        "-isysroot", sdk.forCommandLine(),
+        "-I${sourceRoot.forCommandLine()}",
+        smokeSource.toString(),
+        library.toString(),
+        *MACOS_FRAMEWORKS.flatMap { listOf("-framework", it) }.toTypedArray(),
+        "-o", smokeExecutable.toString(),
+    )
+    run(sourceRoot, "xcrun", "lipo", "-verify_arch", "arm64", smokeExecutable.toString())
 }
 
 private fun provisionMingwDependency(dependencies: Path): Path {
@@ -344,15 +405,34 @@ private fun newestDependency(directory: Path, prefix: String, marker: String): P
 private fun dependencyRevision(name: String): Int =
     name.substringAfterLast('-').toIntOrNull() ?: 0
 
+private fun macosSdkPath(): Path {
+    check(isMacos()) { "The macOS ARM64 raylib library must be built on macOS" }
+    val process = ProcessBuilder("xcrun", "--sdk", "macosx", "--show-sdk-path")
+        .redirectErrorStream(true)
+        .start()
+    val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
+    check(process.waitFor() == 0 && output.isNotEmpty()) {
+        "Unable to locate the macOS SDK with xcrun: $output"
+    }
+    return Path.of(output)
+}
+
 private fun hostPlatform(): String = when {
     isWindows() -> "mingw"
     System.getProperty("os.name").lowercase().contains("linux") -> "linux"
-    else -> error("raylib-kt currently supports Windows and Linux hosts")
+    isMacos() -> "macosArm64"
+    else -> error("raylib-kt currently supports Windows, Linux, and macOS hosts")
 }
 
-private fun hostName(): String = if (isWindows()) "windows" else "linux"
+private fun hostName(): String = when {
+    isWindows() -> "windows"
+    isMacos() -> "macos"
+    else -> "linux"
+}
 
 private fun isWindows(): Boolean = System.getProperty("os.name").lowercase().contains("windows")
+
+private fun isMacos(): Boolean = System.getProperty("os.name").lowercase().contains("mac")
 
 private fun Path.forDefFile(): String = toAbsolutePath().normalize().toString().replace('\\', '/')
 

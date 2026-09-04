@@ -1,0 +1,79 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-x64:
+    name: Linux x64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      KONAN_DATA_DIR: ${{ runner.temp }}/konan
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            libasound2-dev libgl1-mesa-dev libglu1-mesa-dev \
+            libwayland-dev libwayland-bin libxkbcommon-dev \
+            libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
+
+      - name: Provision Kotlin/Native toolchain
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --project-dir ci-bootstrap/linux --variant release
+
+      - name: Generate raylib bindings
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:generate@build-plugin
+
+      - name: Build Linux release
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:compileLinuxX64Release
+
+  windows-x64:
+    name: Windows x64
+    runs-on: windows-2025
+    timeout-minutes: 45
+    env:
+      KONAN_DATA_DIR: ${{ runner.temp }}\konan
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Provision Kotlin/Native toolchain
+        shell: pwsh
+        run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" build --project-dir ci-bootstrap\windows --variant release
+
+      - name: Generate raylib bindings
+        run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" task :raylib-kt:generate@build-plugin
+
+      - name: Build Windows release
+        run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" task :raylib-kt:compileMingwX64Release
+
+  macos-arm64:
+    name: macOS ARM64
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      KONAN_DATA_DIR: ${{ runner.temp }}/konan
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+
+      - name: Provision Kotlin/Native toolchain
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --project-dir ci-bootstrap/macos --variant release
+
+      - name: Generate raylib bindings
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:generate@build-plugin
+
+      - name: Build macOS ARM64 release
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:compileMacosArm64Release
