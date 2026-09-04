@@ -17,7 +17,7 @@ alias = "p"
 env = { _.file = ".env" }
 depends = "build"
 run = "./kotlin task :raylib-kt:publishToMavenCentral"
-run_windows = "echo Publishing macosArm64 artifacts must run on macOS; use the GitHub Actions publish workflow. && exit /b 1"
+run_windows = "kotlin.bat task :raylib-kt:publishToMavenCentral"
 
 [tasks.publishLocal]
 description = "Publishes the package to local maven"
@@ -25,4 +25,4 @@ alias = "pl"
 env = { _.file = ".env" }
 depends = "build"
 run = "./kotlin publish mavenLocal"
-run_windows = "echo Publishing macosArm64 artifacts must run on macOS; use the GitHub Actions publish workflow. && exit /b 1"
+run_windows = "kotlin.bat publish mavenLocal"
