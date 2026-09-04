@@ -28,7 +28,7 @@ jobs:
             libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
 
       - name: Provision Kotlin/Native toolchain
-        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --project-dir ci-bootstrap/linux --variant release
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --variant release
 
       - name: Generate raylib bindings
         run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:generate@build-plugin
@@ -48,7 +48,7 @@ jobs:
 
       - name: Provision Kotlin/Native toolchain
         shell: pwsh
-        run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" build --project-dir ci-bootstrap\windows --variant release
+        run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" build --variant release
 
       - name: Generate raylib bindings
         run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" task :raylib-kt:generate@build-plugin
@@ -70,7 +70,7 @@ jobs:
         run: test "$(uname -m)" = arm64
 
       - name: Provision Kotlin/Native toolchain
-        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --project-dir ci-bootstrap/macos --variant release
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --variant release
 
       - name: Generate raylib bindings
         run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:generate@build-plugin
