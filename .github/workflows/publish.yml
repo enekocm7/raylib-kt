@@ -1,0 +1,39 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  maven-central:
+    name: Publish Maven Central
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      KONAN_DATA_DIR: ${{ github.workspace }}/build/konan
+      KOTLIN_TOOLCHAIN_MAVEN_CENTRAL_USERNAME: ${{ secrets.KOTLIN_TOOLCHAIN_MAVEN_CENTRAL_USERNAME }}
+      KOTLIN_TOOLCHAIN_MAVEN_CENTRAL_PASSWORD: ${{ secrets.KOTLIN_TOOLCHAIN_MAVEN_CENTRAL_PASSWORD }}
+      KOTLIN_TOOLCHAIN_SIGNING_KEY: ${{ secrets.KOTLIN_TOOLCHAIN_SIGNING_KEY }}
+      KOTLIN_TOOLCHAIN_SIGNING_KEY_PASSPHRASE: ${{ secrets.KOTLIN_TOOLCHAIN_SIGNING_KEY_PASSPHRASE }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+
+      - name: Provision Kotlin/Native toolchain
+        run: |
+          bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
+          mkdir -p "$bootstrap_dir/src"
+          printf '%s\n' 'product: macos/app' > "$bootstrap_dir/module.yaml"
+          printf '%s\n' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
+          ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --project-dir "$bootstrap_dir" --variant release
+
+      - name: Generate raylib bindings
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:generate@build-plugin
+
+      - name: Publish to Maven Central
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:publishToMavenCentral
