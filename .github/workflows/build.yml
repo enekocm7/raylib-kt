@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      KONAN_DATA_DIR: ${{ runner.temp }}/konan
+      KONAN_DATA_DIR: ${{ github.workspace }}/build/konan
 
     steps:
       - uses: actions/checkout@v5
@@ -41,7 +41,7 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 45
     env:
-      KONAN_DATA_DIR: ${{ runner.temp }}\konan
+      KONAN_DATA_DIR: ${{ github.workspace }}/build/konan
 
     steps:
       - uses: actions/checkout@v5
@@ -61,7 +61,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     env:
-      KONAN_DATA_DIR: ${{ runner.temp }}/konan
+      KONAN_DATA_DIR: ${{ github.workspace }}/build/konan
 
     steps:
       - uses: actions/checkout@v5
