@@ -27,11 +27,11 @@ jobs:
             libwayland-dev libwayland-bin libxkbcommon-dev \
             libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
 
-      - name: Provision Kotlin/Native toolchain
-        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --variant release
-
       - name: Generate raylib bindings
         run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:generate@build-plugin
+
+      - name: Provision Kotlin/Native toolchain
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --variant release
 
       - name: Build Linux release
         run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:compileLinuxX64Release
@@ -46,12 +46,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Generate raylib bindings
+        run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" task :raylib-kt:generate@build-plugin
+
       - name: Provision Kotlin/Native toolchain
         shell: pwsh
         run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" build --variant release
-
-      - name: Generate raylib bindings
-        run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" task :raylib-kt:generate@build-plugin
 
       - name: Build Windows release
         run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" task :raylib-kt:compileMingwX64Release
@@ -69,11 +69,11 @@ jobs:
       - name: Verify Apple Silicon runner
         run: test "$(uname -m)" = arm64
 
-      - name: Provision Kotlin/Native toolchain
-        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --variant release
-
       - name: Generate raylib bindings
         run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:generate@build-plugin
+
+      - name: Provision Kotlin/Native toolchain
+        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --variant release
 
       - name: Build macOS ARM64 release
         run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:compileMacosArm64Release
