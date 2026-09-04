@@ -38,6 +38,24 @@ The API is available from the `raylib` package:
 import raylib.*
 ```
 
+## Example
+
+```kotlin
+fun main() {
+    InitWindow(600, 400, "raylib-kt")
+
+    SetTargetFPS(60)
+    while (!windowShouldClose) {
+        drawing {
+            ClearBackground(RAYWHITE)
+            DrawText("Hello from kotlin", 200, 200, 20, BLACK)
+        }
+    }
+
+    CloseWindow()
+}
+```
+
 ## Requirements
 
 The published package includes the raylib static libraries, so you do not need to install raylib separately.
