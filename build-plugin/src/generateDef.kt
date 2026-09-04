@@ -8,6 +8,9 @@ import java.security.MessageDigest
 
 private const val RAYLIB_VERSION = "6.0"
 private const val LINUX_RELEASE_SHA256 = "b64ba618a19e7da9e9c0e09bb398ecfd477a77d2d7231901bafc8739d27c08d2"
+private const val LINUX_BUILD_CONFIGURATION = "raylib-6.0-linux-x64-glfw-x11-wayland-v2"
+private const val MINGW_DEPENDENCY = "msys2-mingw-w64-x86_64-2"
+private const val MINGW_DEPENDENCY_SHA256 = "50b7c3b4c91661753e2c23de00d4d7d113264c947f7ec6836eac085e16f602e8"
 private val RAYLIB_HEADERS = listOf("raylib.h", "raymath.h", "rlgl.h")
 private val RAYLIB_SOURCES = listOf(
     "rcore",
@@ -17,6 +20,17 @@ private val RAYLIB_SOURCES = listOf(
     "rmodels",
     "raudio",
     "rglfw",
+)
+private val WAYLAND_PROTOCOLS = listOf(
+    "wayland.xml" to "wayland-client-protocol",
+    "xdg-shell.xml" to "xdg-shell-client-protocol",
+    "xdg-decoration-unstable-v1.xml" to "xdg-decoration-unstable-v1-client-protocol",
+    "viewporter.xml" to "viewporter-client-protocol",
+    "relative-pointer-unstable-v1.xml" to "relative-pointer-unstable-v1-client-protocol",
+    "pointer-constraints-unstable-v1.xml" to "pointer-constraints-unstable-v1-client-protocol",
+    "fractional-scale-v1.xml" to "fractional-scale-v1-client-protocol",
+    "xdg-activation-v1.xml" to "xdg-activation-v1-client-protocol",
+    "idle-inhibit-unstable-v1.xml" to "idle-inhibit-unstable-v1-client-protocol",
 )
 
 @TaskAction
@@ -58,7 +72,7 @@ fun generateDef(
             staticLibraries.mingw = libraylib.a
             libraryPaths.mingw = ${mingwLibraryDir.forDefFile()}
 
-            linkerOpts.linux = -lm -lpthread -ldl -lrt -lX11 -lGL
+            linkerOpts.linux = -L/usr/lib64 -L/usr/lib/x86_64-linux-gnu -lm -lpthread -ldl -lrt -lX11 -lGL
             linkerOpts.mingw = -lopengl32 -lgdi32 -lwinmm
 
             userSetupHint = raylib is built by the build-plugin with the Kotlin/Native LLVM toolchain
@@ -94,8 +108,14 @@ private fun copyArtifacts(
 }
 
 private fun buildIfMissing(sourceDir: Path, libraryDir: Path, platform: String) {
-    if (!libraryDir.resolve("libraylib.a").toFile().isFile) {
+    val library = libraryDir.resolve("libraylib.a")
+    val configurationFile = libraryDir.resolve(".build-configuration")
+    val configurationChanged = platform == "linux" &&
+        (!configurationFile.toFile().isFile || Files.readString(configurationFile).trim() != LINUX_BUILD_CONFIGURATION)
+
+    if (!library.toFile().isFile || configurationChanged) {
         buildRaylib(sourceDir, libraryDir, platform)
+        if (platform == "linux") Files.writeString(configurationFile, "$LINUX_BUILD_CONFIGURATION\n")
     }
 }
 
@@ -177,20 +197,38 @@ private fun buildRaylib(sourceDir: Path, libraryDir: Path, platform: String) {
     val objectDir = libraryDir.resolve("objects")
     objectDir.toFile().mkdirs()
 
+    if (platform == "linux") generateWaylandProtocols(sourceRoot)
+
     val platformFlags = when (platform) {
         "mingw" -> {
-            val sysroot = newestDependency(dependencies, "msys2-mingw-w64-x86_64-", "")
+            val sysroot = provisionMingwDependency(dependencies)
             listOf(
                 "--target=x86_64-pc-windows-gnu",
                 "--sysroot=${sysroot.forCommandLine()}",
                 "-DUNICODE",
             )
         }
-        "linux" -> listOf(
-            "--target=x86_64-unknown-linux-gnu",
-            "-fPIC",
-            "-D_GLFW_X11",
-        )
+        "linux" -> {
+            val toolchain = newestDependency(
+                dependencies,
+                "x86_64-unknown-linux-gnu-gcc-",
+                "",
+            )
+            val sysroot = toolchain.resolve("x86_64-unknown-linux-gnu/sysroot")
+            check(sysroot.resolve("usr/include/features.h").toFile().isFile) {
+                "Kotlin/Native Linux sysroot was not found under $sysroot"
+            }
+            listOf(
+                "--target=x86_64-unknown-linux-gnu",
+                "--sysroot=${sysroot.forCommandLine()}",
+                // The Kotlin/Native sysroot provides glibc while the host provides
+                // the desktop-protocol headers that are not part of that sysroot.
+                "-idirafter", "/usr/include",
+                "-fPIC",
+                "-D_GLFW_X11",
+                "-D_GLFW_WAYLAND",
+            )
+        }
         else -> error("Unsupported host platform: $platform")
     }
 
@@ -227,6 +265,64 @@ private fun buildRaylib(sourceDir: Path, libraryDir: Path, platform: String) {
         libraryDir.resolve("libraylib.a").toString(),
         *objects.map(Path::toString).toTypedArray(),
     )
+}
+
+private fun provisionMingwDependency(dependencies: Path): Path {
+    val dependencyDir = dependencies.resolve(MINGW_DEPENDENCY)
+    val windowsHeader = dependencyDir.resolve("x86_64-w64-mingw32/include/windows.h")
+    if (windowsHeader.toFile().isFile) return dependencyDir
+
+    check(!dependencyDir.toFile().exists()) {
+        "Incomplete Kotlin/Native MinGW dependency at $dependencyDir; delete it and run the build again"
+    }
+
+    val cacheDir = dependencies.resolve("cache")
+    val archive = cacheDir.resolve("$MINGW_DEPENDENCY.tar.gz")
+    Files.createDirectories(cacheDir)
+
+    if (!archive.toFile().isFile || sha256(archive) != MINGW_DEPENDENCY_SHA256) {
+        val partialArchive = archive.resolveSibling("${archive.fileName}.part")
+        Files.deleteIfExists(partialArchive)
+        java.net.URI(
+            "https://download.jetbrains.com/kotlin/native/$MINGW_DEPENDENCY.tar.gz"
+        ).toURL().openStream().use { input ->
+            Files.copy(input, partialArchive, StandardCopyOption.REPLACE_EXISTING)
+        }
+        check(sha256(partialArchive) == MINGW_DEPENDENCY_SHA256) {
+            "Checksum mismatch while downloading Kotlin/Native's MinGW dependency"
+        }
+        Files.move(partialArchive, archive, StandardCopyOption.REPLACE_EXISTING)
+    }
+
+    Files.createDirectories(dependencies)
+    run(dependencies, "tar", "-xzf", archive.toString(), "-C", dependencies.toString())
+    check(windowsHeader.toFile().isFile) {
+        "The Kotlin/Native MinGW dependency did not contain x86_64-w64-mingw32/include/windows.h"
+    }
+    return dependencyDir
+}
+
+private fun generateWaylandProtocols(sourceRoot: Path) {
+    val protocolDir = sourceRoot.resolve("external/glfw/deps/wayland")
+
+    for ((protocolFile, outputName) in WAYLAND_PROTOCOLS) {
+        val protocol = protocolDir.resolve(protocolFile)
+        check(protocol.toFile().isFile) { "Missing bundled Wayland protocol: $protocol" }
+        run(
+            sourceRoot,
+            "wayland-scanner",
+            "client-header",
+            protocol.toString(),
+            sourceRoot.resolve("$outputName.h").toString(),
+        )
+        run(
+            sourceRoot,
+            "wayland-scanner",
+            "private-code",
+            protocol.toString(),
+            sourceRoot.resolve("$outputName-code.h").toString(),
+        )
+    }
 }
 
 private fun konanDependenciesDir(): Path {

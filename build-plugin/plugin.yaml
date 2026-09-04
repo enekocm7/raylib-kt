@@ -3,10 +3,6 @@ tasks:
     action: !generateDef
       includeDir: ${project.rootDir}/cinterop/include
       bundledLibraryDir: ${project.rootDir}/cinterop/lib
-      defPath: ${taskOutputDir}/raylib.def
+      defPath: ${project.rootDir}/cinterop/raylib.def
       raylibBuildDir: ${project.rootDir}/build/raylib/6.0
-
-generated:
-  cinteropDefinitions:
-    - defFile: ${tasks.generate.action.defPath}
 
