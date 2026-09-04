@@ -9,7 +9,7 @@ import java.security.MessageDigest
 private const val RAYLIB_VERSION = "6.0"
 private const val LINUX_RELEASE_SHA256 = "b64ba618a19e7da9e9c0e09bb398ecfd477a77d2d7231901bafc8739d27c08d2"
 private const val LINUX_BUILD_CONFIGURATION = "raylib-6.0-linux-x64-glfw-x11-wayland-v2"
-private const val MACOS_ARM64_BUILD_CONFIGURATION = "raylib-6.0-macos-arm64-glfw-cocoa-v1"
+private const val MACOS_ARM64_BUILD_CONFIGURATION = "raylib-6.0-macos-arm64-glfw-cocoa-v2"
 private const val MINGW_DEPENDENCY = "msys2-mingw-w64-x86_64-2"
 private const val MINGW_DEPENDENCY_SHA256 = "50b7c3b4c91661753e2c23de00d4d7d113264c947f7ec6836eac085e16f602e8"
 private val MACOS_FRAMEWORKS = listOf("OpenGL", "Cocoa", "IOKit", "CoreAudio", "CoreVideo")
@@ -257,7 +257,6 @@ private fun buildRaylib(sourceDir: Path, libraryDir: Path, platform: String) {
             "--target=arm64-apple-macos11",
             "-isysroot", macosSdkPath().forCommandLine(),
             "-fPIC",
-            "-D_GLFW_COCOA",
         )
         else -> error("Unsupported host platform: $platform")
     }
@@ -325,7 +324,7 @@ private fun verifyMacosArm64Library(sourceRoot: Path, library: Path) {
         *MACOS_FRAMEWORKS.flatMap { listOf("-framework", it) }.toTypedArray(),
         "-o", smokeExecutable.toString(),
     )
-    run(sourceRoot, "xcrun", "lipo", "-verify_arch", "arm64", smokeExecutable.toString())
+    run(sourceRoot, "xcrun", "lipo", smokeExecutable.toString(), "-verify_arch", "arm64")
 }
 
 private fun provisionMingwDependency(dependencies: Path): Path {
