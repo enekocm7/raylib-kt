@@ -16,8 +16,8 @@ description = "Publishes the package to maven central"
 alias = "p"
 env = { _.file = ".env" }
 depends = "build"
-run = "./kotlin publish mavenCentral"
-run_windows = "kotlin.bat publish mavenCentral"
+run = "./kotlin task :raylib-kt:publishToMavenCentral"
+run_windows = "kotlin.bat task :raylib-kt:publishToMavenCentral"
 
 [tasks.publishLocal]
 description = "Publishes the package to local maven"

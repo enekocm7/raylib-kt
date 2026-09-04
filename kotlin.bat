@@ -17,9 +17,9 @@
 setlocal
 
 @rem The version of the Kotlin Toolchain distribution to provision and use
-set kotlin_cli_version=0.12.0
+set kotlin_cli_version=0.12.0-dev-4235
 @rem Establish chain of trust from here by specifying the exact checksum of the Kotlin Toolchain distribution to be run
-set kotlin_cli_sha256=626b2d6e8753ad75b4b02144e597d2f441dd940794be5103352af2e800e4e13e
+set kotlin_cli_sha256=bdca33fe80a31082636fbd68e58ccf6ef620a478faca5a28d2f1dc8984286ebd
 
 if not defined KOTLIN_CLI_DOWNLOAD_ROOT set KOTLIN_CLI_DOWNLOAD_ROOT=https://packages.jetbrains.team/maven/p/amper/amper
 if not defined KOTLIN_CLI_BOOTSTRAP_CACHE_DIR set KOTLIN_CLI_BOOTSTRAP_CACHE_DIR=%LOCALAPPDATA%\JetBrains\Kotlin\cli
@@ -175,7 +175,7 @@ if exist "%wrapper_candidate%" (
 
 if exist "%project_dir%\project.yaml" (
     @rem Found project.yaml but no wrapper alongside it
-    echo WARNING: Found a project.yaml in '%project_dir%', but the wrapper script is missing; using Kotlin Toolchain v%kotlin_cli_version%. >&2
+    echo WARNING: Found a project.yaml in '%project_dir%', but the wrapper script is missing; using Kotlin Toolchain v$kotlin_cli_version. >&2
     exit /b 1
 )
 
@@ -253,12 +253,5 @@ if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
 rem We use busybox here because it doesn't reinterpret the user-passed command-line arguments (that we pass via %*).
 rem Also this way we can use the unified launcher script (.sh)
 set KOTLIN_CLI_WRAPPER_PATH=%~f0
-
-rem The '& call' after the app run is to avoid the "Terminate batch job (Y/N)?" prompt
-"%busybox_exe%" sh "%kotlin_cli_target_dir%\bin\launcher.sh" %* & call :exitWithErrorLevel
-
-:exitWithErrorLevel
-@rem We use "%COMSPEC%" /d /c exit so that and/or operators work properly when calling kotlin.bat directly from a script
-@rem without the `call` command. With a plain `exit /B %ERRORLEVEL%`, using `kotlin.bat && echo success` would print
-@rem 'success' even in case of failure. Consumers would have to use `call kotlin.bat && echo success` for it to work.`
-"%COMSPEC%" /d /c exit %ERRORLEVEL%
+"%busybox_exe%" sh "%kotlin_cli_target_dir%\bin\launcher.sh" %*
+exit /B %ERRORLEVEL%
