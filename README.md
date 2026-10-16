@@ -30,7 +30,7 @@ Add the dependency to your `module.yaml`:
 
 ```yaml
 dependencies:
-  - io.github.enekocm7:raylib-kt:0.3.0
+  - io.github.enekocm7:raylib-kt:0.4.0
 ```
 
 The API is available from the `raylib` package:
