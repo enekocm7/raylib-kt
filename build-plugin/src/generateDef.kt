@@ -6,10 +6,10 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 
-private const val RAYLIB_VERSION = "6.0"
-private const val LINUX_RELEASE_SHA256 = "b64ba618a19e7da9e9c0e09bb398ecfd477a77d2d7231901bafc8739d27c08d2"
-private const val LINUX_BUILD_CONFIGURATION = "raylib-6.0-linux-x64-glfw-x11-wayland-v2"
-private const val MACOS_ARM64_BUILD_CONFIGURATION = "raylib-6.0-macos-arm64-glfw-cocoa-v2"
+private const val RAYLIB_VERSION = "6.2"
+private const val LINUX_RELEASE_SHA256 = "586bbc32f3596d439382b1c5dbc6c1c573eb7e1d00fe92be7d4deb116883720d"
+private const val LINUX_BUILD_CONFIGURATION = "raylib-6.2-linux-x64-glfw-x11-wayland-v2"
+private const val MACOS_ARM64_BUILD_CONFIGURATION = "raylib-6.2-macos-arm64-glfw-cocoa-v2"
 private const val MINGW_DEPENDENCY = "msys2-mingw-w64-x86_64-2"
 private const val MINGW_DEPENDENCY_SHA256 = "50b7c3b4c91661753e2c23de00d4d7d113264c947f7ec6836eac085e16f602e8"
 private val MACOS_FRAMEWORKS = listOf("OpenGL", "Cocoa", "IOKit", "CoreAudio", "CoreVideo")

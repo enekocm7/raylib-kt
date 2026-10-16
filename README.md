@@ -1,6 +1,6 @@
 # raylib-kt
 
-Kotlin/Native bindings for [raylib 6.0](https://www.raylib.com/).
+Kotlin/Native bindings for [raylib 6.2](https://www.raylib.com/).
 
 Supported platforms:
 
