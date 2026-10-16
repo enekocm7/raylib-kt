@@ -12,7 +12,7 @@ private const val LINUX_BUILD_CONFIGURATION = "raylib-6.2-linux-x64-glfw-x11-way
 private const val MACOS_ARM64_BUILD_CONFIGURATION = "raylib-6.2-macos-arm64-glfw-cocoa-v2"
 private const val MINGW_DEPENDENCY = "msys2-mingw-w64-x86_64-2"
 private const val MINGW_DEPENDENCY_SHA256 = "50b7c3b4c91661753e2c23de00d4d7d113264c947f7ec6836eac085e16f602e8"
-private val MACOS_FRAMEWORKS = listOf("OpenGL", "Cocoa", "IOKit", "CoreAudio", "CoreVideo")
+private val MACOS_FRAMEWORKS = listOf("OpenGL", "Cocoa", "IOKit", "CoreAudio", "CoreVideo", "QuartzCore")
 private val RAYLIB_HEADERS = listOf("raylib.h", "raymath.h", "rlgl.h")
 private val RAYLIB_SOURCES = listOf(
     "rcore",
