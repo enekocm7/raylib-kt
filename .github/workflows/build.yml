@@ -13,9 +13,6 @@ jobs:
     name: Linux x64
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    env:
-      KONAN_DATA_DIR: ${{ github.workspace }}/build/konan
-
     steps:
       - uses: actions/checkout@v5
 
@@ -27,68 +24,44 @@ jobs:
             libwayland-dev libwayland-bin libxkbcommon-dev \
             libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
 
-      - name: Provision Kotlin/Native toolchain
-        run: |
-          bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
-          mkdir -p "$bootstrap_dir/src"
-          printf '%s\n' 'product: linux/app' > "$bootstrap_dir/module.yaml"
-          printf '%s\n' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
-          ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --project-dir "$bootstrap_dir" --variant release
+      - uses: enekocm7/kargo/setup-kargo@master
 
-      - name: Generate raylib bindings
-        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:generate@build-plugin
+      # Kotlin/Native cannot generate Apple cinterop bindings off macOS
+      - name: Limit targets to the host
+        shell: bash
+        run: sed -i.bak 's/, "macos_arm64"//' kargo.toml
 
       - name: Build Linux release
-        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:compileLinuxX64Release
+        run: kargo build --release
 
   windows-x64:
     name: Windows x64
     runs-on: windows-2025
     timeout-minutes: 45
-    env:
-      KONAN_DATA_DIR: ${{ github.workspace }}/build/konan
-
     steps:
       - uses: actions/checkout@v5
 
-      - name: Provision Kotlin/Native toolchain
-        shell: pwsh
-        run: |
-          $bootstrapDir = Join-Path $env:RUNNER_TEMP 'konan-bootstrap'
-          New-Item -ItemType Directory -Force (Join-Path $bootstrapDir 'src') | Out-Null
-          Set-Content -LiteralPath (Join-Path $bootstrapDir 'module.yaml') -Value 'product: windows/app'
-          Set-Content -LiteralPath (Join-Path $bootstrapDir 'src/main.kt') -Value 'fun main() = Unit'
-          .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" build --project-dir $bootstrapDir --variant release
+      - uses: enekocm7/kargo/setup-kargo@master
 
-      - name: Generate raylib bindings
-        run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" task :raylib-kt:generate@build-plugin
+      # Kotlin/Native cannot generate Apple cinterop bindings off macOS
+      - name: Limit targets to the host
+        shell: bash
+        run: sed -i.bak 's/, "macos_arm64"//' kargo.toml
 
       - name: Build Windows release
-        run: .\kotlin.bat --shared-cache-dir "$env:RUNNER_TEMP\kotlin-cache" task :raylib-kt:compileMingwX64Release
+        run: kargo build --release
 
   macos-arm64:
     name: macOS ARM64
     runs-on: macos-15
     timeout-minutes: 45
-    env:
-      KONAN_DATA_DIR: ${{ github.workspace }}/build/konan
-
     steps:
       - uses: actions/checkout@v5
 
       - name: Verify Apple Silicon runner
         run: test "$(uname -m)" = arm64
 
-      - name: Provision Kotlin/Native toolchain
-        run: |
-          bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
-          mkdir -p "$bootstrap_dir/src"
-          printf '%s\n' 'product: macos/app' > "$bootstrap_dir/module.yaml"
-          printf '%s\n' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
-          ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" build --project-dir "$bootstrap_dir" --variant release
-
-      - name: Generate raylib bindings
-        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:generate@build-plugin
+      - uses: enekocm7/kargo/setup-kargo@master
 
       - name: Build macOS ARM64 release
-        run: ./kotlin --shared-cache-dir "$RUNNER_TEMP/kotlin-cache" task :raylib-kt:compileMacosArm64Release
+        run: kargo build --release --locked

@@ -1,0 +1,48 @@
+[package]
+name = "raylib-kt"
+version = "0.4.0"
+group = "io.github.enekocm7"
+description = "Kotlin Native bindings for raylib"
+license = "Zlib"
+authors = ["Eneko Cañedo <enekocanedo@gmail.com>"]
+repository = "https://github.com/enekocm7/raylib-kt"
+
+[toolchain]
+kargo = ">=0.1"
+
+[kotlin]
+opt-in = ["kotlinx.cinterop.ExperimentalForeignApi"]
+
+[target.native]
+platforms = ["linux_x64", "mingw_x64", "macos_arm64"]
+kind = "library"
+
+[target.native.cinterop.raylib]
+package = "raylib"
+headers = ["raylib.h", "raymath.h", "rlgl.h"]
+header-filter = ["raylib.h", "raymath.h", "rlgl.h"]
+compiler-options = ["-Icinterop/include"]
+static-libraries = ["libraylib.a"]
+
+[target.native.cinterop.raylib.platform.linux_x64]
+library-paths = ["cinterop/lib/linux"]
+linker-options = ["-L/usr/lib64", "-L/usr/lib/x86_64-linux-gnu", "-lm", "-lpthread", "-ldl", "-lrt", "-lX11", "-lGL"]
+
+[target.native.cinterop.raylib.platform.mingw_x64]
+library-paths = ["cinterop/lib/mingw"]
+linker-options = ["-lopengl32", "-lgdi32", "-lwinmm"]
+
+[target.native.cinterop.raylib.platform.macos_arm64]
+library-paths = ["cinterop/lib/macosArm64"]
+frameworks = ["OpenGL", "Cocoa", "IOKit", "CoreAudio", "CoreVideo", "QuartzCore"]
+
+[tasks.raylib]
+description = "Builds raylib with Kotlin/Native's toolchain and bundles its headers and static libraries"
+run = "kargo script scripts/build-raylib.kt"
+shell = "sh"
+hooks = ["pre-build"]
+
+[publish]
+repository = "maven-central"
+central-publishing = "automatic"
+sources = true

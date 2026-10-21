@@ -1,28 +1,23 @@
 [tasks.generateDef]
-description = "Builds raylib with Kotlin/Native's toolchain and generates its def file"
+description = "Builds raylib with Kotlin/Native's toolchain and bundles its headers and static libraries"
 alias = "g"
-run = "./kotlin task :raylib-kt:generate@build-plugin"
-run_windows = "kotlin.bat task :raylib-kt:generate@build-plugin"
+run = "kargo task raylib"
 
 [tasks.build]
-description = "Generates def file and then builds the project"
+description = "Builds raylib and then builds the project"
 alias = "b"
-depends = "generateDef"
-run = "./kotlin build"
-run_windows = "kotlin.bat build"
+run = "kargo build"
 
 [tasks.publish]
 description = "Publishes the package to maven central"
 alias = "p"
 env = { _.file = ".env" }
 depends = "build"
-run = "./kotlin task :raylib-kt:publishToMavenCentral"
-run_windows = "kotlin.bat task :raylib-kt:publishToMavenCentral"
+run = "kargo publish --locked --repository maven-central"
 
 [tasks.publishLocal]
 description = "Publishes the package to local maven"
 alias = "pl"
 env = { _.file = ".env" }
 depends = "build"
-run = "./kotlin publish mavenLocal"
-run_windows = "kotlin.bat publish mavenLocal"
+run = "kargo publish --local"

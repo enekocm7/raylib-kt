@@ -1,6 +1,5 @@
-import org.jetbrains.amper.plugins.Input
-import org.jetbrains.amper.plugins.Output
-import org.jetbrains.amper.plugins.TaskAction
+/* kargo
+*/
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -35,13 +34,12 @@ private val WAYLAND_PROTOCOLS = listOf(
     "idle-inhibit-unstable-v1.xml" to "idle-inhibit-unstable-v1-client-protocol",
 )
 
-@TaskAction
-fun generateDef(
-    @Input includeDir: Path,
-    @Input bundledLibraryDir: Path,
-    @Output defPath: Path,
-    @Output raylibBuildDir: Path,
-) {
+fun main() {
+    val rootDir = Path.of("").toAbsolutePath()
+    val includeDir = rootDir.resolve("cinterop/include")
+    val bundledLibraryDir = rootDir.resolve("cinterop/lib")
+    val raylibBuildDir = rootDir.resolve("build/raylib/$RAYLIB_VERSION")
+
     val sourceDir = raylibBuildDir.resolve("source")
     val host = hostPlatform()
     val nativeBuildDir = sourceDir.resolve("build")
@@ -67,36 +65,6 @@ fun generateDef(
 
     val builtPlatforms = listOf("linux", "mingw") + listOfNotNull(host.takeIf { it == "macosArm64" })
     copyArtifacts(sourceDir, nativeBuildDir, includeDir, bundledLibraryDir, builtPlatforms)
-
-    val linuxLibraryDir = bundledLibraryDir.resolve("linux")
-    val mingwLibraryDir = bundledLibraryDir.resolve("mingw")
-    val macosArm64LibraryDir = bundledLibraryDir.resolve("macosArm64")
-
-    defPath.toFile().apply {
-        parentFile.mkdirs()
-        writeText(
-            """
-            headers = raylib.h raymath.h rlgl.h
-            headerFilter = raylib.h raymath.h rlgl.h
-            compilerOpts = -I${includeDir.forDefFile()}
-
-            staticLibraries.linux = libraylib.a
-            libraryPaths.linux = ${linuxLibraryDir.forDefFile()}
-
-            staticLibraries.mingw = libraylib.a
-            libraryPaths.mingw = ${mingwLibraryDir.forDefFile()}
-
-            staticLibraries.osx = libraylib.a
-            libraryPaths.osx = ${macosArm64LibraryDir.forDefFile()}
-
-            linkerOpts.linux = -L/usr/lib64 -L/usr/lib/x86_64-linux-gnu -lm -lpthread -ldl -lrt -lX11 -lGL
-            linkerOpts.mingw = -lopengl32 -lgdi32 -lwinmm
-            linkerOpts.osx = ${MACOS_FRAMEWORKS.joinToString(" ") { "-framework $it" }}
-
-            userSetupHint = raylib is built by the build-plugin with the Kotlin/Native LLVM toolchain
-            """.trimIndent() + "\n"
-        )
-    }
 }
 
 private fun copyArtifacts(
@@ -214,7 +182,7 @@ private fun buildRaylib(sourceDir: Path, libraryDir: Path, platform: String) {
     val archiveTool = llvm.resolve("bin/llvm-ar$executableSuffix")
 
     check(clang.toFile().isFile && archiveTool.toFile().isFile) {
-        "Kotlin/Native LLVM tools were not found under $llvm. Run a Kotlin/Native build once to download them."
+        "Kotlin/Native LLVM tools were not found under $llvm. Run `kargo toolchain install` to download them."
     }
 
     val sourceRoot = sourceDir.resolve("src")
@@ -389,7 +357,8 @@ private fun konanDependenciesDir(): Path {
     val konanHome = System.getenv("KONAN_DATA_DIR")
         ?.takeIf(String::isNotBlank)
         ?.let(Path::of)
-        ?: Path.of(System.getProperty("user.home"), ".konan")
+        ?: Path.of(System.getenv("KARGO_HOME")?.takeIf(String::isNotBlank) ?: System.getProperty("user.home") + "/.kargo")
+            .resolve("toolchains/konan")
     return konanHome.resolve("dependencies")
 }
 
@@ -432,8 +401,6 @@ private fun hostName(): String = when {
 private fun isWindows(): Boolean = System.getProperty("os.name").lowercase().contains("windows")
 
 private fun isMacos(): Boolean = System.getProperty("os.name").lowercase().contains("mac")
-
-private fun Path.forDefFile(): String = toAbsolutePath().normalize().toString().replace('\\', '/')
 
 private fun Path.forCommandLine(): String = toAbsolutePath().normalize().toString().replace('\\', '/')
 
