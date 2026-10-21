@@ -7,9 +7,6 @@ license = "Zlib"
 authors = ["Eneko Cañedo <enekocanedo@gmail.com>"]
 repository = "https://github.com/enekocm7/raylib-kt"
 
-[toolchain]
-kargo = ">=0.1"
-
 [kotlin]
 opt-in = ["kotlinx.cinterop.ExperimentalForeignApi"]
 
