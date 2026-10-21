@@ -1,29 +1,60 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>raylib-kt</title>
-  <style>
-    html, body { margin: 0; height: 100%; background: #1d1d1d; color: #ddd; font-family: sans-serif; }
-    body { display: flex; align-items: center; justify-content: center; }
-    canvas { display: block; outline: none; }
-    #status { position: fixed; top: 8px; left: 8px; }
-  </style>
-</head>
-<body>
-  <div id="status">Loading...</div>
-  <!-- raylib needs a canvas that is not scaled by CSS, or mouse input is offset. -->
-  <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
-  <script type="module">
-    // 1. Start the Emscripten build of raylib and expose it to the Kotlin/Wasm module as `raylib`.
-    import createRaylib from './raylib.mjs';
-    const canvas = document.getElementById('canvas');
-    globalThis.raylib = await createRaylib({ canvas });
-    document.getElementById('status').remove();
 
-    // 2. Only then start the Kotlin module: it runs main() as soon as it is imported.
-    await import('./raylib-web-example.mjs');
-  </script>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>raylib-kt</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            background: #1d1d1d;
+            color: #ddd;
+            font-family: sans-serif;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            display: block;
+            outline: none;
+        }
+
+        #status {
+            position: fixed;
+            top: 8px;
+            left: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="status">Loading...</div>
+    <!-- raylib needs a canvas that is not scaled by CSS, or mouse input is offset. -->
+    <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+    <script type="module">
+        const status = document.getElementById('status');
+        try {
+            // 1. Start the Emscripten build of raylib and expose it to the Kotlin/Wasm module as `raylib`.
+            // A dynamic import, so a missing raylib.mjs is reported below instead of leaving "Loading...".
+            const {default: createRaylib} = await import('./raylib.mjs');
+            const canvas = document.getElementById('canvas');
+            globalThis.raylib = await createRaylib({canvas});
+
+            // 2. Only then start the Kotlin module: it runs main() as soon as it is imported.
+            await import('./raylib-web-example.mjs');
+            status.remove();
+        } catch (e) {
+            status.textContent = `Failed to start: ${e.message}. If raylib.mjs or raylib.wasm is missing, run "kargo script scripts/build-raylib-web.kt" from the repository root.`;
+            throw e;
+        }
+    </script>
 </body>
+
 </html>
