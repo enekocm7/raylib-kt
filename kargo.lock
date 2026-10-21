@@ -57,3 +57,38 @@ sha256 = "00d542206fff41458574ab7341e80f13629743af68621dd5d3750cd836ca70e5"
 module = "org.jetbrains.kotlin:kotlin-stdlib"
 version = "2.2.20-Beta2"
 dependencies = ["org.jetbrains.kotlin:kotlin-stdlib-wasm-js:2.2.20-Beta2"]
+
+[resolution."wasm/test"]
+inputs = "5cf663a542f43b351dbd57a1a0855e30f9bb7809416e882e589a8c07a7916e1b"
+roots = ["org.jetbrains.kotlin:kotlin-stdlib-wasm-js", "org.jetbrains.kotlinx:kotlinx-browser-wasm-js", "org.jetbrains.kotlin:kotlin-test-wasm-js"]
+
+[[resolution."wasm/test".package]]
+module = "org.jetbrains.kotlin:kotlin-stdlib-wasm-js"
+version = "2.4.21"
+
+[[resolution."wasm/test".package.files]]
+path = "org/jetbrains/kotlin/kotlin-stdlib-wasm-js/2.4.21/kotlin-stdlib-wasm-js-2.4.21.klib"
+sha256 = "48c2061061d0744487e1dfc1969a0de582b26c0094ea3f2ae986ea2ff2c25693"
+
+[[resolution."wasm/test".package]]
+module = "org.jetbrains.kotlinx:kotlinx-browser-wasm-js"
+version = "0.5.0"
+dependencies = ["org.jetbrains.kotlin:kotlin-stdlib:2.2.20-Beta2"]
+
+[[resolution."wasm/test".package.files]]
+path = "org/jetbrains/kotlinx/kotlinx-browser-wasm-js/0.5.0/kotlinx-browser-wasm-js-0.5.0.klib"
+sha256 = "00d542206fff41458574ab7341e80f13629743af68621dd5d3750cd836ca70e5"
+
+[[resolution."wasm/test".package]]
+module = "org.jetbrains.kotlin:kotlin-test-wasm-js"
+version = "2.4.21"
+dependencies = ["org.jetbrains.kotlin:kotlin-stdlib:2.4.21"]
+
+[[resolution."wasm/test".package.files]]
+path = "org/jetbrains/kotlin/kotlin-test-wasm-js/2.4.21/kotlin-test-wasm-js-2.4.21.klib"
+sha256 = "dfc1df84d34ec052b2454f72ed6de357f644a01ad39e8d80676bacffae541caf"
+
+[[resolution."wasm/test".package]]
+module = "org.jetbrains.kotlin:kotlin-stdlib"
+version = "2.4.21"
+dependencies = ["org.jetbrains.kotlin:kotlin-stdlib-wasm-js:2.4.21"]
