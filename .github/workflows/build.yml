@@ -84,7 +84,7 @@ jobs:
           kargo build --manifest-path "$bootstrap_dir/kargo.toml"
 
       - name: Build raylib for the web with Emscripten
-        run: python3 scripts/build-raylib-web.py
+        run: kargo script scripts/build-raylib-web.kt
 
       - name: Check the generated bindings are up to date
         run: git diff --exit-code -- src-wasm

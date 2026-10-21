@@ -65,10 +65,10 @@ raylib-kt can run in the browser, like C raylib's `PLATFORM_WEB`. Kotlin/Native 
 Build the library for the web with:
 
 ```shell
-python scripts/build-raylib-web.py
+kargo script scripts/build-raylib-web.kt
 ```
 
-This downloads and activates a pinned [emsdk](https://github.com/emscripten-core/emsdk) under `build/` (it needs `git` and Python 3), generates `src-wasm/RaylibBindings.kt` and a C shim from raylib's `raylib_api.json`, and writes `raylib.mjs` and `raylib.wasm` to `build/web/dist/`. The task is also available as `kargo task raylib-web`.
+This downloads and activates a pinned [emsdk](https://github.com/emscripten-core/emsdk) under `build/` (it needs `git`, plus `python3` on Linux and macOS), generates `src-wasm/RaylibBindings.kt` and a C shim from raylib's `raylib_api.json`, and writes `raylib.mjs` and `raylib.wasm` to `build/web/dist/`. The task is also available as `kargo task raylib-web`.
 
 ### Using it
 

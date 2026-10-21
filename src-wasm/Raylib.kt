@@ -8,7 +8,7 @@ import kotlin.js.ExperimentalWasmJsInterop
  * The version of the raylib library this was built against (e.g. `"6.2"`).
  *
  * The rest of the raylib API is generated from raylib's `raylib_api.json` (see
- * `scripts/build-raylib-web.py`) and calls the Emscripten build of raylib, which the page must load
+ * `scripts/build-raylib-web.kt`) and calls the Emscripten build of raylib, which the page must load
  * into the global `raylib` before this module (see `resources/index.html`).
  */
 val RaylibVersion: String
