@@ -3092,4 +3092,3 @@ fun SetAudioStreamPan(stream: AudioStream, pan: Float) { js_SetAudioStreamPan(st
 private external fun js_SetAudioStreamBufferSizeDefault(size: Int)
 /** Default size for new audio streams */
 fun SetAudioStreamBufferSizeDefault(size: Int) { js_SetAudioStreamBufferSizeDefault(size) }
-

@@ -405,8 +405,7 @@ private fun generateBindings(): List<String> {
     Files.createDirectories(shimC.parent)
     Files.writeString(shimC, cSource)
     Files.createDirectories(bindingsKt.parent)
-    Files.writeString(bindingsKt, generateKotlin(api, bindings).trimEnd() + "
-")
+    Files.writeString(bindingsKt, generateKotlin(api, bindings).trimEnd() + "\n")
     return exported
 }
 
