@@ -25,5 +25,20 @@ jobs:
 
       - uses: enekocm7/kargo/setup-kargo@master
 
+      # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
+      # but the raylib task needs them before the project's own native build starts.
+      - name: Provision Kotlin/Native toolchain
+        shell: bash
+        env:
+          KARGO_NATIVE_CACHE: "false"
+        run: |
+          bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
+          mkdir -p "$bootstrap_dir/src"
+          printf '%s
+' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
+          printf '%s
+' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
+          kargo build --manifest-path "$bootstrap_dir/kargo.toml"
+
       - name: Publish to Maven Central
         run: kargo publish --locked --repository maven-central
