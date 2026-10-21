@@ -14,6 +14,10 @@ opt-in = ["kotlinx.cinterop.ExperimentalForeignApi"]
 platforms = ["linux_x64", "mingw_x64", "macos_arm64"]
 kind = "library"
 
+[target.wasm]
+environment = "browser"
+kind = "library"
+
 [target.native.cinterop.raylib]
 package = "raylib"
 headers = ["raylib.h", "raymath.h", "rlgl.h"]
@@ -38,6 +42,17 @@ description = "Builds raylib with Kotlin/Native's toolchain and bundles its head
 run = "kargo script scripts/build-raylib.kt"
 shell = "sh"
 hooks = ["pre-build"]
+
+[tasks.raylib-web-bindings]
+description = "Generates the Kotlin/Wasm bindings from raylib's API description"
+run = "kargo script scripts/build-raylib-web.kt -- --bindings-only"
+shell = "sh"
+hooks = ["pre-build"]
+
+[tasks.raylib-web]
+description = "Builds raylib for the web with Emscripten and generates the Kotlin/Wasm bindings"
+run = "kargo script scripts/build-raylib-web.kt"
+shell = "sh"
 
 [publish]
 repository = "maven-central"

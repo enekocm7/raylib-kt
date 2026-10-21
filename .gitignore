@@ -3,3 +3,7 @@
 .idea
 /cinterop
 .env
+/examples/web/resources/raylib.mjs
+/examples/web/resources/raylib.wasm
+/examples/web/target
+/src-wasm/RaylibBindings.kt
