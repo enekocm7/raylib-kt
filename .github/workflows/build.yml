@@ -26,6 +26,9 @@ jobs:
 
       - uses: enekocm7/kargo/setup-kargo@master
 
+      - name: Install Kargo toolchains
+        run: kargo toolchain install
+
       # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
       # but the raylib task needs them before the project's own native build starts.
       - name: Provision Kotlin/Native toolchain
@@ -57,6 +60,9 @@ jobs:
       - uses: actions/checkout@v5
 
       - uses: enekocm7/kargo/setup-kargo@master
+
+      - name: Install Kargo toolchains
+        run: kargo toolchain install
 
       # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
       # but the raylib task needs them before the project's own native build starts.
@@ -92,6 +98,9 @@ jobs:
         run: test "$(uname -m)" = arm64
 
       - uses: enekocm7/kargo/setup-kargo@master
+
+      - name: Install Kargo toolchains
+        run: kargo toolchain install
 
       # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
       # but the raylib task needs them before the project's own native build starts.
