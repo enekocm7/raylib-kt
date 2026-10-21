@@ -7,12 +7,27 @@ inputs = "0d52657d6dd0a44368814458d31d1d3a4ca2764f2c7aea2a28d9a9e7f43cc8a9"
 roots = []
 package = []
 
+[resolution."native-linux_x64/test"]
+inputs = "0d52657d6dd0a44368814458d31d1d3a4ca2764f2c7aea2a28d9a9e7f43cc8a9"
+roots = []
+package = []
+
 [resolution."native-macos_arm64/main"]
 inputs = "8c3ae6f3e3b9bedaedcfd9bfdb4bf2dce54351d50e02647dd22fc04d9458aa32"
 roots = []
 package = []
 
+[resolution."native-macos_arm64/test"]
+inputs = "8c3ae6f3e3b9bedaedcfd9bfdb4bf2dce54351d50e02647dd22fc04d9458aa32"
+roots = []
+package = []
+
 [resolution."native-mingw_x64/main"]
+inputs = "050187079a65ddc9a0203504133828fb793e013d98c7acf5f952e0220b571175"
+roots = []
+package = []
+
+[resolution."native-mingw_x64/test"]
 inputs = "050187079a65ddc9a0203504133828fb793e013d98c7acf5f952e0220b571175"
 roots = []
 package = []
