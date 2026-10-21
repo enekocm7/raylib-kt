@@ -24,13 +24,13 @@ kotlin {
 }
 ```
 
-### Kotlin Toolchain
+### Kargo
 
-Add the dependency to your `module.yaml`:
+Add the dependency to your `kargo.toml`:
 
-```yaml
-dependencies:
-  - io.github.enekocm7:raylib-kt:0.4.0
+```toml
+[dependencies]
+"io.github.enekocm7:raylib-kt" = "0.4.0"
 ```
 
 The API is available from the `raylib` package:
@@ -61,7 +61,7 @@ fun main() {
 
 The published package includes the raylib static libraries, so you do not need to install raylib separately.
 
-The included `kotlin` and `kotlin.bat` wrappers download the required Kotlin Toolchain, JRE, Kotlin/Native compiler, and native toolchains automatically.
+Building from source needs [Kargo](https://enekocm7.github.io/kargo/), which downloads the JDK, Kotlin/Native compiler and native toolchains automatically.
 
 ### Debian and Ubuntu
 
@@ -118,28 +118,11 @@ git clone https://github.com/enekocm7/raylib-kt.git
 cd raylib-kt
 ```
 
-Build on Linux:
-
 ```shell
-./kotlin task :raylib-kt:generate@build-plugin
-./kotlin build
+kargo build
 ```
 
-Build on Windows:
-
-```batch
-kotlin.bat task :raylib-kt:generate@build-plugin
-kotlin.bat build
-```
-
-Build on an Apple Silicon Mac:
-
-```shell
-./kotlin task :raylib-kt:generate@build-plugin
-./kotlin build
-```
-
-The first command downloads and builds raylib, then generates the Kotlin/Native cinterop definition. The second command builds the library for the targets supported by the current host.
+`kargo build` first runs the `raylib` task (`scripts/build-raylib.kt`), which downloads and builds raylib and bundles its headers and static libraries under `cinterop/`, and then builds the library. Apple targets can only be built on macOS, so on Linux and Windows remove `"macos_arm64"` from `[target.native] platforms` in `kargo.toml` first.
 
 If [mise](https://mise.jdx.dev/) is installed, the same build can be run with:
 
