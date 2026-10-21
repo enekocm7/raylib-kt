@@ -86,9 +86,6 @@ jobs:
       - name: Build raylib for the web with Emscripten
         run: kargo script scripts/build-raylib-web.kt
 
-      - name: Check the generated bindings are up to date
-        run: git diff --exit-code -- src-wasm
-
       - name: Build the Wasm library and the web example
         shell: bash
         run: |

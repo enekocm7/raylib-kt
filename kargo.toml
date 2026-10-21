@@ -43,6 +43,12 @@ run = "kargo script scripts/build-raylib.kt"
 shell = "sh"
 hooks = ["pre-build"]
 
+[tasks.raylib-web-bindings]
+description = "Generates the Kotlin/Wasm bindings from raylib's API description"
+run = "kargo script scripts/build-raylib-web.kt -- --bindings-only"
+shell = "sh"
+hooks = ["pre-build"]
+
 [tasks.raylib-web]
 description = "Builds raylib for the web with Emscripten and generates the Kotlin/Wasm bindings"
 run = "kargo script scripts/build-raylib-web.kt"
