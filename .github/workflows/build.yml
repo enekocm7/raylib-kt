@@ -52,6 +52,51 @@ jobs:
       - name: Build Linux release
         run: kargo build --release
 
+  web-wasm:
+    name: Web (Kotlin/Wasm)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends             libasound2-dev libgl1-mesa-dev libglu1-mesa-dev             libwayland-dev libwayland-bin libxkbcommon-dev             libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
+
+      - uses: enekocm7/kargo/setup-kargo@master
+
+      - name: Install Kargo toolchains
+        run: kargo toolchain install
+
+      # The pre-build raylib task also builds the native libraries, which need Kotlin/Native's toolchain
+      - name: Provision Kotlin/Native toolchain
+        shell: bash
+        env:
+          KARGO_NATIVE_CACHE: "false"
+        run: |
+          bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
+          mkdir -p "$bootstrap_dir/src"
+          printf '%s
+' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
+          printf '%s
+' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
+          kargo build --manifest-path "$bootstrap_dir/kargo.toml"
+
+      - name: Build raylib for the web with Emscripten
+        run: python3 scripts/build-raylib-web.py
+
+      - name: Check the generated bindings are up to date
+        run: git diff --exit-code -- src-wasm
+
+      - name: Build the Wasm library and the web example
+        shell: bash
+        run: |
+          sed -i.bak 's/, "macos_arm64"//' kargo.toml
+          kargo build --target wasm
+          cd examples/web
+          kargo build
+
   windows-x64:
     name: Windows x64
     runs-on: windows-2025
