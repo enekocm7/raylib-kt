@@ -17,6 +17,7 @@ kind = "library"
 [target.wasm]
 environment = "browser"
 kind = "library"
+web-resources = ["build/web/dist/raylib.mjs", "build/web/dist/raylib.wasm"]
 
 [target.native.cinterop.raylib]
 package = "raylib"
@@ -53,6 +54,7 @@ hooks = ["pre-build"]
 description = "Builds raylib for the web with Emscripten and generates the Kotlin/Wasm bindings"
 run = "kargo script scripts/build-raylib-web.kt"
 shell = "sh"
+hooks = ["pre-build"]
 
 [publish]
 repository = "maven-central"
