@@ -176,13 +176,19 @@ private fun cloneRaylib(sourceDir: Path) {
 
 private fun buildRaylib(sourceDir: Path, libraryDir: Path, platform: String) {
     val dependencies = konanDependenciesDir()
-    val llvm = newestDependency(dependencies, "llvm-", "-${hostName()}-essentials-")
-    val executableSuffix = if (isWindows()) ".exe" else ""
-    val clang = llvm.resolve("bin/clang$executableSuffix")
-    val archiveTool = llvm.resolve("bin/llvm-ar$executableSuffix")
-
-    check(clang.toFile().isFile && archiveTool.toFile().isFile) {
-        "Kotlin/Native LLVM tools were not found under $llvm. Run `kargo toolchain install` to download them."
+    // Kotlin/Native does not ship an "essentials" LLVM bundle for macOS hosts,
+    // so use the Xcode toolchain there, which is already required for the SDK.
+    val (clang, archiveTool) = if (platform == "macosArm64") {
+        xcrunTool("clang") to xcrunTool("ar")
+    } else {
+        val llvm = konanLlvm(dependencies)
+        val executableSuffix = if (isWindows()) ".exe" else ""
+        val clang = llvm.resolve("bin/clang$executableSuffix")
+        val archiveTool = llvm.resolve("bin/llvm-ar$executableSuffix")
+        check(clang.toFile().isFile && archiveTool.toFile().isFile) {
+            "Kotlin/Native LLVM tools were not found under $llvm. Run `kargo toolchain install` to download them."
+        }
+        clang to archiveTool
     }
 
     val sourceRoot = sourceDir.resolve("src")
@@ -357,18 +363,70 @@ private fun konanDependenciesDir(): Path {
     val konanHome = System.getenv("KONAN_DATA_DIR")
         ?.takeIf(String::isNotBlank)
         ?.let(Path::of)
-        ?: Path.of(System.getenv("KARGO_HOME")?.takeIf(String::isNotBlank) ?: System.getProperty("user.home") + "/.kargo")
-            .resolve("toolchains/konan")
+        ?: kargoToolchainsDir().resolve("konan")
     return konanHome.resolve("dependencies")
 }
 
-private fun newestDependency(directory: Path, prefix: String, marker: String): Path {
-    val candidates = directory.toFile().listFiles()
-        ?.filter { it.isDirectory && it.name.startsWith(prefix) && it.name.contains(marker) }
-        .orEmpty()
-    return candidates.maxByOrNull { dependencyRevision(it.name) }?.toPath()
-        ?: error("Required Kotlin/Native dependency matching '$prefix*$marker*' was not found in $directory")
+private fun kargoToolchainsDir(): Path =
+    Path.of(System.getenv("KARGO_HOME")?.takeIf(String::isNotBlank) ?: System.getProperty("user.home") + "/.kargo")
+        .resolve("toolchains")
+
+// Kotlin/Native uses the "essentials" LLVM bundle on Windows hosts and the "dev"
+// bundle on Linux and macOS hosts; either one provides clang and llvm-ar.
+private fun konanLlvm(dependencies: Path): Path {
+    val markers = listOf("-${hostName()}-essentials-", "-${hostName()}-dev-")
+    findDependency(dependencies, "llvm-", markers)?.let { return it }
+    downloadKonanDependencies(dependencies)
+    return findDependency(dependencies, "llvm-", markers)
+        ?: error("Required Kotlin/Native LLVM matching 'llvm-*${markers.joinToString("*' or 'llvm-*")}*' was not found in $dependencies")
 }
+
+// Kotlin/Native downloads its dependencies lazily, the first time it links a
+// program, so a fresh machine has none of them after `kargo toolchain install`.
+private fun downloadKonanDependencies(dependencies: Path) {
+    val toolchains = kargoToolchainsDir()
+    val distribution = toolchains.resolve("kotlin-native").toFile().listFiles()
+        ?.filter { it.resolve("bin").isDirectory }
+        ?.maxByOrNull { it.name }
+        ?: error("No Kotlin/Native distribution was found under ${toolchains.resolve("kotlin-native")}. Run `kargo toolchain install`.")
+    val compiler = distribution.resolve(if (isWindows()) "bin/kotlinc-native.bat" else "bin/kotlinc-native")
+    val target = when (hostPlatform()) {
+        "mingw" -> "mingw_x64"
+        "linux" -> "linux_x64"
+        else -> "macos_arm64"
+    }
+
+    val workDir = Files.createTempDirectory("raylib-kt-konan-deps")
+    try {
+        val source = workDir.resolve("main.kt")
+        Files.writeString(source, "fun main() {}\n")
+        val process = ProcessBuilder(
+            compiler.toString(),
+            "-Xcheck-dependencies",
+            "-target", target,
+            "-o", workDir.resolve("main").toString(),
+            source.toString(),
+        )
+            .directory(workDir.toFile())
+            .inheritIO()
+        process.environment()["KONAN_DATA_DIR"] = dependencies.parent.toString()
+        process.environment()["JAVA_HOME"] = System.getProperty("java.home")
+        // Only the downloaded dependencies matter; the probe program itself is discarded.
+        process.start().waitFor()
+    } finally {
+        workDir.toFile().deleteRecursively()
+    }
+}
+
+private fun findDependency(directory: Path, prefix: String, markers: List<String>): Path? =
+    directory.toFile().listFiles()
+        ?.filter { dir -> dir.isDirectory && dir.name.startsWith(prefix) && markers.any { dir.name.contains(it) } }
+        ?.maxByOrNull { dependencyRevision(it.name) }
+        ?.toPath()
+
+private fun newestDependency(directory: Path, prefix: String, marker: String): Path =
+    findDependency(directory, prefix, listOf(marker))
+        ?: error("Required Kotlin/Native dependency matching '$prefix*$marker*' was not found in $directory")
 
 private fun dependencyRevision(name: String): Int =
     name.substringAfterLast('-').toIntOrNull() ?: 0
@@ -381,6 +439,17 @@ private fun macosSdkPath(): Path {
     val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
     check(process.waitFor() == 0 && output.isNotEmpty()) {
         "Unable to locate the macOS SDK with xcrun: $output"
+    }
+    return Path.of(output)
+}
+
+private fun xcrunTool(name: String): Path {
+    val process = ProcessBuilder("xcrun", "--sdk", "macosx", "--find", name)
+        .redirectErrorStream(true)
+        .start()
+    val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
+    check(process.waitFor() == 0 && output.isNotEmpty()) {
+        "Unable to locate `$name` with xcrun: $output"
     }
     return Path.of(output)
 }
