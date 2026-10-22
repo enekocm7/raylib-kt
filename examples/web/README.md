@@ -45,7 +45,7 @@ In `kargo.toml`, use the browser environment and add raylib-kt:
 environment = "browser"
 
 [dependencies]
-"io.github.enekocm7:raylib-kt" = "0.4.0"
+"io.github.enekocm7:raylib-kt" = "0.5.0"
 ```
 
 To build against a checkout of this repository instead, use `raylib-kt = { path = "../raylib-kt" }`, as this example does.

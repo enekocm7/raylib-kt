@@ -19,7 +19,7 @@ Add the dependency to your native source set:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.enekocm7:raylib-kt:0.4.0")
+            implementation("io.github.enekocm7:raylib-kt:0.5.0")
         }
     }
 }
@@ -31,7 +31,7 @@ Add the dependency to your `kargo.toml`:
 
 ```toml
 [dependencies]
-"io.github.enekocm7:raylib-kt" = "0.4.0"
+"io.github.enekocm7:raylib-kt" = "0.5.0"
 ```
 
 The API is available from the `raylib` package:
