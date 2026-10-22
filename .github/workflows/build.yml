@@ -1,163 +1,163 @@
 name: Build
 
 on:
-  push:
-  pull_request:
-  workflow_dispatch:
+    push:
+    pull_request:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  linux-x64:
-    name: Linux x64
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v5
+    linux-x64:
+        name: Linux x64
+        runs-on: ubuntu-24.04
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v5
 
-      - name: Install native dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends \
-            libasound2-dev libgl1-mesa-dev libglu1-mesa-dev \
-            libwayland-dev libwayland-bin libxkbcommon-dev \
-            libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
+            - name: Install native dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install --yes --no-install-recommends \
+                    libasound2-dev libgl1-mesa-dev libglu1-mesa-dev \
+                    libwayland-dev libwayland-bin libxkbcommon-dev \
+                    libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
 
-      - uses: enekocm7/kargo/setup-kargo@master
+            - uses: enekocm7/kargo/setup-kargo@master
 
-      - name: Install Kargo toolchains
-        run: kargo toolchain install
+            - name: Install Kargo toolchains
+              run: kargo toolchain install
 
-      # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
-      # but the raylib task needs them before the project's own native build starts.
-      - name: Provision Kotlin/Native toolchain
-        shell: bash
-        env:
-          KARGO_NATIVE_CACHE: "false"
-        run: |
-          bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
-          mkdir -p "$bootstrap_dir/src"
-          printf '%s
-' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
-          printf '%s
-' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
-          kargo build --manifest-path "$bootstrap_dir/kargo.toml"
+            # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
+            # but the raylib task needs them before the project's own native build starts.
+            - name: Provision Kotlin/Native toolchain
+              shell: bash
+              env:
+                  KARGO_NATIVE_CACHE: "false"
+              run: |
+                  bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
+                  mkdir -p "$bootstrap_dir/src"
+                  printf '%s
+                  ' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
+                  printf '%s
+                  ' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
+                  kargo build --manifest-path "$bootstrap_dir/kargo.toml"
 
-      # Kotlin/Native cannot generate Apple cinterop bindings off macOS
-      - name: Limit targets to the host
-        shell: bash
-        run: sed -i.bak 's/, "macos_arm64"//' kargo.toml
+            # Kotlin/Native cannot generate Apple cinterop bindings off macOS
+            - name: Limit targets to the host
+              shell: bash
+              run: sed -i.bak 's/, "macos_arm64"//' kargo.toml
 
-      - name: Build Linux release
-        run: kargo build --release
+            - name: Build Linux release
+              run: kargo build --release
 
-  web-wasm:
-    name: Web (Kotlin/Wasm)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v5
+    web-wasm:
+        name: Web (Kotlin/Wasm)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v5
 
-      - name: Install native dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends             libasound2-dev libgl1-mesa-dev libglu1-mesa-dev             libwayland-dev libwayland-bin libxkbcommon-dev             libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
+            - name: Install native dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install --yes --no-install-recommends             libasound2-dev libgl1-mesa-dev libglu1-mesa-dev             libwayland-dev libwayland-bin libxkbcommon-dev             libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
 
-      - uses: enekocm7/kargo/setup-kargo@master
+            - uses: enekocm7/kargo/setup-kargo@master
 
-      - name: Install Kargo toolchains
-        run: kargo toolchain install
+            - name: Install Kargo toolchains
+              run: kargo toolchain install
 
-      # The pre-build raylib task also builds the native libraries, which need Kotlin/Native's toolchain
-      - name: Provision Kotlin/Native toolchain
-        shell: bash
-        env:
-          KARGO_NATIVE_CACHE: "false"
-        run: |
-          bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
-          mkdir -p "$bootstrap_dir/src"
-          printf '%s
-' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
-          printf '%s
-' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
-          kargo build --manifest-path "$bootstrap_dir/kargo.toml"
+            # The pre-build raylib task also builds the native libraries, which need Kotlin/Native's toolchain
+            - name: Provision Kotlin/Native toolchain
+              shell: bash
+              env:
+                  KARGO_NATIVE_CACHE: "false"
+              run: |
+                  bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
+                  mkdir -p "$bootstrap_dir/src"
+                  printf '%s
+                  ' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
+                  printf '%s
+                  ' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
+                  kargo build --manifest-path "$bootstrap_dir/kargo.toml"
 
-      - name: Build raylib for the web with Emscripten
-        run: kargo script scripts/build-raylib-web.kt
+            - name: Build raylib for the web with Emscripten
+              run: kargo script scripts/build-raylib-web.kt
 
-      - name: Build the Wasm library and the web example
-        shell: bash
-        run: |
-          sed -i.bak 's/, "macos_arm64"//' kargo.toml
-          kargo build --target wasm
-          cd examples/web
-          kargo build
+            - name: Build the Wasm library and the web example
+              shell: bash
+              run: |
+                  sed -i.bak 's/, "macos_arm64"//' kargo.toml
+                  kargo build --target wasm
+                  cd examples/web
+                  kargo build
 
-  windows-x64:
-    name: Windows x64
-    runs-on: windows-2025
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v5
+    windows-x64:
+        name: Windows x64
+        runs-on: windows-2025
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v5
 
-      - uses: enekocm7/kargo/setup-kargo@master
+            - uses: enekocm7/kargo/setup-kargo@master
 
-      - name: Install Kargo toolchains
-        run: kargo toolchain install
+            - name: Install Kargo toolchains
+              run: kargo toolchain install
 
-      # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
-      # but the raylib task needs them before the project's own native build starts.
-      - name: Provision Kotlin/Native toolchain
-        shell: bash
-        env:
-          KARGO_NATIVE_CACHE: "false"
-        run: |
-          bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
-          mkdir -p "$bootstrap_dir/src"
-          printf '%s
-' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
-          printf '%s
-' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
-          kargo build --manifest-path "$bootstrap_dir/kargo.toml"
+            # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
+            # but the raylib task needs them before the project's own native build starts.
+            - name: Provision Kotlin/Native toolchain
+              shell: bash
+              env:
+                  KARGO_NATIVE_CACHE: "false"
+              run: |
+                  bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
+                  mkdir -p "$bootstrap_dir/src"
+                  printf '%s
+                  ' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
+                  printf '%s
+                  ' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
+                  kargo build --manifest-path "$bootstrap_dir/kargo.toml"
 
-      # Kotlin/Native cannot generate Apple cinterop bindings off macOS
-      - name: Limit targets to the host
-        shell: bash
-        run: sed -i.bak 's/, "macos_arm64"//' kargo.toml
+            # Kotlin/Native cannot generate Apple cinterop bindings off macOS
+            - name: Limit targets to the host
+              shell: bash
+              run: sed -i.bak 's/, "macos_arm64"//' kargo.toml
 
-      - name: Build Windows release
-        run: kargo build --release
+            - name: Build Windows release
+              run: kargo build --release
 
-  macos-arm64:
-    name: macOS ARM64
-    runs-on: macos-15
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v5
+    macos-arm64:
+        name: macOS ARM64
+        runs-on: macos-15
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v5
 
-      - name: Verify Apple Silicon runner
-        run: test "$(uname -m)" = arm64
+            - name: Verify Apple Silicon runner
+              run: test "$(uname -m)" = arm64
 
-      - uses: enekocm7/kargo/setup-kargo@master
+            - uses: enekocm7/kargo/setup-kargo@master
 
-      - name: Install Kargo toolchains
-        run: kargo toolchain install
+            - name: Install Kargo toolchains
+              run: kargo toolchain install
 
-      # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
-      # but the raylib task needs them before the project's own native build starts.
-      - name: Provision Kotlin/Native toolchain
-        shell: bash
-        env:
-          KARGO_NATIVE_CACHE: "false"
-        run: |
-          bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
-          mkdir -p "$bootstrap_dir/src"
-          printf '%s
-' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
-          printf '%s
-' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
-          kargo build --manifest-path "$bootstrap_dir/kargo.toml"
+            # Kargo downloads Kotlin/Native's LLVM toolchain and sysroot on the first native build,
+            # but the raylib task needs them before the project's own native build starts.
+            - name: Provision Kotlin/Native toolchain
+              shell: bash
+              env:
+                  KARGO_NATIVE_CACHE: "false"
+              run: |
+                  bootstrap_dir="$RUNNER_TEMP/konan-bootstrap"
+                  mkdir -p "$bootstrap_dir/src"
+                  printf '%s
+                  ' '[package]' 'name = "bootstrap"' 'version = "0.1.0"' '[target.native]' 'platforms = ["host"]' > "$bootstrap_dir/kargo.toml"
+                  printf '%s
+                  ' 'fun main() = Unit' > "$bootstrap_dir/src/main.kt"
+                  kargo build --manifest-path "$bootstrap_dir/kargo.toml"
 
-      - name: Build macOS ARM64 release
-        run: kargo build --release --locked
+            - name: Build macOS ARM64 release
+              run: kargo build --release --locked
